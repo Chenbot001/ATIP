@@ -1,0 +1,2 @@
+acl-anthology>=0.5.2
+pandas>=1.0.0
