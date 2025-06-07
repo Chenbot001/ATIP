@@ -63,10 +63,10 @@ def plot_distribution(track_counts):
     """
     plt.figure(figsize=(14, 10))
     
-    # Only show top 15 categories if there are many categories
-    if len(track_counts) > 15:
-        plot_data = track_counts.head(15).copy()
-        title_suffix = " (Top 15 Tracks)"
+    # Only show top 30 categories if there are many categories
+    if len(track_counts) > 30:
+        plot_data = track_counts.head(30).copy()
+        title_suffix = " (Top 30 Tracks)"
     else:
         plot_data = track_counts.copy()
         title_suffix = ""
@@ -94,13 +94,13 @@ def plot_distribution(track_counts):
     
     # Save the figure
     plt.tight_layout()
-    output_path = '../visualizations/track_distribution.png'
+    output_path = 'C:\\Eric\\Projects\\AI_Researcher_Network\\visualizations\\track_distribution.png'
     plt.savefig(output_path)
     print(f"\nVisualization saved to {output_path}")
     
 if __name__ == "__main__":
     # Path to data
-    data_path = "../data/ACL25_ThemeData.csv"
+    data_path = "C:\\Eric\\Projects\\AI_Researcher_Network\\data\\ACL25_ThemeData.csv"
     
     # Analyze track distribution
     analyze_track_distribution(data_path)

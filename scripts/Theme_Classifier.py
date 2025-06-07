@@ -57,7 +57,7 @@ class WeightedLossTrainer(Trainer):
         
         # Manually compute loss with class weights
         loss_fct = torch.nn.CrossEntropyLoss(weight=self.class_weights)
-        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        loss = loss_fct(logits.view(-1, logits.shape[-1]), labels.view(-1))
         
         return (loss, outputs) if return_outputs else loss
 
@@ -162,16 +162,25 @@ def compute_metrics(eval_pred):
         eval_pred (EvalPrediction): Contains predictions and labels
         
     Returns:
-        dict: Dictionary of metrics
+        dict: Dictionary of metrics including micro/macro F1 scores
     """
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
     
     # Calculate metrics
     accuracy = accuracy_score(labels, preds)
+    
+    # Calculate macro metrics
     precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(
         labels, preds, average='macro', zero_division=0
     )
+    
+    # Calculate micro metrics
+    precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(
+        labels, preds, average='micro', zero_division=0
+    )
+    
+    # Calculate weighted metrics
     precision_weighted, recall_weighted, f1_weighted, _ = precision_recall_fscore_support(
         labels, preds, average='weighted', zero_division=0
     )
@@ -182,6 +191,9 @@ def compute_metrics(eval_pred):
         'precision_macro': precision_macro,
         'recall_macro': recall_macro,
         'f1_macro': f1_macro,
+        'precision_micro': precision_micro,
+        'recall_micro': recall_micro,
+        'f1_micro': f1_micro,
         'precision_weighted': precision_weighted,
         'recall_weighted': recall_weighted,
         'f1_weighted': f1_weighted
@@ -227,8 +239,7 @@ def train_model(train_dataset, val_dataset, num_labels, label2id, id2label):
     )
     weights_tensor = torch.tensor(class_weights, dtype=torch.float)
     print("Class weights calculated.")
-    
-    # Define training arguments
+      # Define training arguments
     print("Setting up training arguments...")
     training_args = TrainingArguments(
         output_dir="./scibert_acl_classifier_results",
@@ -238,10 +249,11 @@ def train_model(train_dataset, val_dataset, num_labels, label2id, id2label):
         gradient_accumulation_steps=8,  # Effective batch size: 32
         learning_rate=3e-5,
         weight_decay=0.01,
-        eval_strategy="steps",
+        eval_strategy="steps",  # Corrected from eval_strategy
         eval_steps=200,  # Adjust based on dataset size
         save_strategy="steps",
         save_steps=200,
+        logging_dir="./logs",
         logging_steps=50,
         fp16=True,
         load_best_model_at_end=True,
@@ -269,7 +281,7 @@ def train_model(train_dataset, val_dataset, num_labels, label2id, id2label):
     
     # Save best model
     print("Saving the best model...")
-    final_model_path = "./final_best_model"
+    final_model_path = "./final_track_classifier_model"
     trainer.save_model(final_model_path)
     tokenizer.save_pretrained(final_model_path)
     
@@ -394,6 +406,12 @@ def plot_confusion_matrix(model, tokenizer, eval_dataset, id2label):
     # The true labels are also in the predictions object
     true_labels = predictions.label_ids
 
+    # Ensure true_labels and pred_labels are numpy arrays and not None
+    if true_labels is None or pred_labels is None:
+        raise ValueError("True labels or predicted labels are None. Cannot compute confusion matrix.")
+    true_labels = np.array(true_labels)
+    pred_labels = np.array(pred_labels)
+
     # Compute the confusion matrix
     cm = confusion_matrix(true_labels, pred_labels)
 
@@ -413,7 +431,7 @@ def plot_confusion_matrix(model, tokenizer, eval_dataset, id2label):
     plt.tight_layout()  # Adjust layout to make sure labels fit
 
     # Save the figure to a file
-    output_path = "confusion_matrix.png"
+    output_path = "/visualizations/confusion_matrix_scibert_ft.png"
     plt.savefig(output_path)
     print(f"Confusion matrix plot saved to {output_path}")
     
@@ -436,31 +454,37 @@ if __name__ == "__main__":
         label2id=label2id, 
         id2label=id2label
     )
-    
-    # Evaluate model
+      # Evaluate model
     print("\nEvaluating model on validation set...")
     metrics = evaluate_model(model, tokenizer, val_dataset)
-    print("Validation metrics:", metrics)
+
+    # Print full metrics for detailed analysis
+    print("Full validation metrics:")
+    for key, value in metrics.items():
+        if isinstance(value, (float, int)):
+            print(f"  {key}: {value:.4f}")
+        else:
+            print(f"  {key}: {value}")
     
     plot_confusion_matrix(model, tokenizer, val_dataset, id2label)
 
-    # Example usage of predict_track function
-    print("\nExample inference:")
-    sample_texts = [
-        "Transformer-based Models for Multilingual NLP Tasks",
-        "A Survey on Bias in Large Language Models",
-        "Resource-Efficient Fine-tuning of Language Models for Low-Resource Languages"
-    ]
+    # # Example usage of predict_track function
+    # print("\nExample inference:")
+    # sample_texts = [
+    #     "Transformer-based Models for Multilingual NLP Tasks",
+    #     "A Survey on Bias in Large Language Models",
+    #     "Resource-Efficient Fine-tuning of Language Models for Low-Resource Languages"
+    # ]
     
-    predictions = predict_track(
-        sample_texts,
-        "./final_best_model",
-        "./final_best_model", 
-        "./final_best_model/label2id.json"
-    )
+    # predictions = predict_track(
+    #     sample_texts,
+    #     "./final_best_model",
+    #     "./final_best_model", 
+    #     "./final_best_model/label2id.json"
+    # )
     
-    print("\nSample predictions:")
-    for text, pred in zip(sample_texts, predictions):
-        print(f"Text: {text}\nPredicted Track: {pred}\n")
+    # print("\nSample predictions:")
+    # for text, pred in zip(sample_texts, predictions):
+    #     print(f"Text: {text}\nPredicted Track: {pred}\n")
     
     print("Fine-tuning and evaluation complete!")
