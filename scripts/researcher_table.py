@@ -1,30 +1,36 @@
 from acl_anthology import Anthology
-from acl_anthology.people.name import Name
-import csv
+from acl_anthology.people.name import Name, NameSpecification
+import pandas as pd
+import os
+import sys
 
 # 定义一个函数来将数据添加到研究者CSV文件中
-def add_to_researcher_table(researcher_id, first_name, last_name, affiliation):
-    # 定义 CSV 文件的文件名
-    csv_file = 'researchers_data.csv'
-    # 定义要写入的行
-    row = [researcher_id, first_name, last_name, affiliation]
-    # 打开 CSV 文件并追加写入
-    with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        # 写入行
-        writer.writerow(row)
+def save_researcher_to_csv(researchers_df, csv_file='data/researchers_data.csv'):
+    # 检查文件是否存在，如果不存在则创建一个新的DataFrame
+    # Check if the file exists to determine whether to write headers
+    file_exists = os.path.isfile(csv_file)
+    
+    # Save the DataFrame to CSV
+    mode = 'a' if file_exists else 'w'
+    header = not file_exists
+    
+    papers_df.to_csv(csv_file, mode=mode, header=header, index=False, encoding='utf-8')
+    print(f"Data saved to {csv_file}")
 
-def search_collection():
-    collection = anthology.get("2024.acl")
+def search_collection(anthology, collection_id=""):
+    collection = anthology.get(collection_id)
     all_unique_authors = set()
     total_papers = 0
     
+    # Create a list to store all paper data
+    researchers_data = []
+
     print(f"Analyzing collection: {collection.id}\n")
     
     for volume in collection.volumes():
         volume_papers = 0
         volume_unique_authors = set()
-        
+
         for paper in volume.papers():
             volume_papers += 1
             total_papers += 1
@@ -33,13 +39,14 @@ def search_collection():
                 name = Name.from_(author.name)
                 first_name = name.first if name.first else ''
                 last_name = name.last
-                # 获取作者机构信息
-                affiliation = author.affiliation if hasattr(author, 'affiliation') else ''
                 # 使用作者姓名作为临时ID（实际应用中应该使用OpenReview.net ID）
-                researcher_id = name.as_full().lower().replace(' ', '_')
+                researcher_id = author.id
                 
-                # 将作者信息添加到研究者表中
-                add_to_researcher_table(researcher_id, first_name, last_name, affiliation)
+                researchers_data.append({
+                    'researcher_id': researcher_id,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                })
                 
                 volume_unique_authors.add(name.as_full())
                 all_unique_authors.add(name.as_full())
@@ -48,25 +55,33 @@ def search_collection():
         print(f"  Number of papers: {volume_papers}")
         print(f"  Number of unique authors: {len(volume_unique_authors)}\n")
 
+    researchers_df = pd.DataFrame(researchers_data)
     print(f"Total {total_papers} papers and unique authors across all volumes in collection {collection.id}: {len(all_unique_authors)}")
 
-if __name__ == "__main__":
-    try:
-        anthology = Anthology.from_repo()
-    except:
-        try:
-            anthology = Anthology()
-        except:
-            print("Could not initialize anthology. Make sure the data is available.")
-            import sys
-            sys.exit(1)
 
-    # 创建研究者表的表头
-    with open('researchers_data.csv', mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(['researcher_id', 'first_name', 'last_name', 'affiliation_history'])
+    return researchers_df
+
+def main():
+    try:
+        # Try to initialize anthology from local repo first
+        anthology = Anthology.from_repo()
+        print("Using local anthology repository.")
+    except Exception as e:
+        print(f"Error initializing anthology: {e}")
+        print("Could not initialize anthology. Make sure the data is available.")
+        sys.exit(1)
+
+    # Search the collection and get paper data
+    researchers_df = search_collection(anthology, collection_id="2024.acl")
+
     
-    search_collection()
+    # Save the data to CSV
+    save__to_csv(papers_df, csv_file='data/papers_data.csv')
+
+    print("Script completed successfully.")
+
+if __name__ == "__main__":
+    main()
 
 
 
