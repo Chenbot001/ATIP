@@ -6,8 +6,8 @@
 
 1.  **Task:** Multi-class text classification.
 2.  **Model:** Fine-tune `allenai/scibert_scivocab_uncased` from Hugging Face.
-3.  **Input Data for Fine-tuning:** ACL 2025 accepted papers with titles and official track information. Assume this data is in a CSV file named `ACL25 Accepted Paper with Track Info.csv`.
-4.  **Target Application:** Classify past ACL papers (for which track information is unavailable) using the fine-tuned model.
+3.  **Input Data for Fine-tuning:** ACL 2025 accepted papers with titles and official track information. Assume this data is in a CSV file named `ACL25_ThemeData.csv`.
+4.  **Target Application:** Classify past ACL papers (for which track information is unavailable) using the fine-tuned model. Expect past papers to be given as a csv file.
 5.  **Primary Python Libraries to Use:**
     * `torch` (PyTorch)
     * `transformers` (Hugging Face: `AutoTokenizer`, `AutoModelForSequenceClassification`, `Trainer`, `TrainingArguments`, `EarlyStoppingCallback`)
@@ -20,11 +20,11 @@
 **II. Data Handling and Preprocessing:**
 
 1.  **Load Data:**
-    * Read `ACL25 Accepted Paper with Track Info.csv` into a pandas DataFrame.
+    * Read `ACL25_ThemeData.csv` into a pandas DataFrame.
     * Essential columns:
-        * `title` (string: paper title)
-        * `track` (string: official track name, this is the target label)
-        * (Optional but preferred) `abstract` (string: paper abstract). If this column is present, combine it with the `title`.
+        * `Title` (string: paper title)
+        * `Track Theme` (string: official track name, this is the target label)
+        * (Optional but preferred) `abstract` (string: paper abstract). If this column is present, combine it with the `Title`.
 2.  **Text Combination (if `abstract` is used):**
     * Create a new column `text_input` by concatenating `title` and `abstract`, separated by a space or a `[SEP]` token analog (e.g., "title text [SEP] abstract text"). If `abstract` is not available or empty, `text_input` should just be the `title`. Handle missing abstracts gracefully.
 3.  **Label Encoding:**
