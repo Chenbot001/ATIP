@@ -5,7 +5,7 @@ import os
 import sys
 
 # 定义一个函数来将数据添加到研究者CSV文件中
-def save_researcher_to_csv(researchers_df, csv_file='data/researchers_data.csv'):
+def save_researchers_to_csv(researchers_df, csv_file='data/researchers_data.csv'):
     # 检查文件是否存在，如果不存在则创建一个新的DataFrame
     # Check if the file exists to determine whether to write headers
     file_exists = os.path.isfile(csv_file)
@@ -14,7 +14,7 @@ def save_researcher_to_csv(researchers_df, csv_file='data/researchers_data.csv')
     mode = 'a' if file_exists else 'w'
     header = not file_exists
     
-    papers_df.to_csv(csv_file, mode=mode, header=header, index=False, encoding='utf-8')
+    researchers_df.to_csv(csv_file, mode=mode, header=header, index=False, encoding='utf-8')
     print(f"Data saved to {csv_file}")
 
 def search_collection(anthology, collection_id=""):
@@ -39,7 +39,7 @@ def search_collection(anthology, collection_id=""):
                 name = Name.from_(author.name)
                 first_name = name.first if name.first else ''
                 last_name = name.last
-                # 使用作者姓名作为临时ID（实际应用中应该使用OpenReview.net ID）
+                # 使用NameSpecification来获取作者ID
                 researcher_id = author.id
                 
                 researchers_data.append({
@@ -76,7 +76,7 @@ def main():
 
     
     # Save the data to CSV
-    save__to_csv(papers_df, csv_file='data/papers_data.csv')
+    save_researchers_to_csv(researchers_df, csv_file='data/researcher_data.csv')
 
     print("Script completed successfully.")
 
