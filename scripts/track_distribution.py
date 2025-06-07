@@ -8,7 +8,7 @@ ACL Track Distribution Analysis
 This script analyses and visualizes the distribution of papers across different track themes
 in the ACL25_ThemeData.csv dataset.
 
-Author: GitHub Copilot
+Author: Eric Chen & GitHub Copilot
 Date: June 8, 2025
 """
 
