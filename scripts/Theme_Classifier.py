@@ -431,7 +431,7 @@ def plot_confusion_matrix(model, tokenizer, eval_dataset, id2label):
     plt.tight_layout()  # Adjust layout to make sure labels fit
 
     # Save the figure to a file
-    output_path = "/visualizations/confusion_matrix_scibert_ft.png"
+    output_path = "./visualizations/confusion_matrix_scibert_ft.png"
     plt.savefig(output_path)
     print(f"Confusion matrix plot saved to {output_path}")
     
