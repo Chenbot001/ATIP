@@ -1,0 +1,26 @@
+1. Computational Social Science and Cultural Analytics
+2. Dialogue and Interactive Systems
+3. Discourse and Pragmatics
+4. Efficient/Low-Resource Methods for NLP
+5. Ethics, Bias, and Fairness
+6. Generation
+7. Human-Centered NLP
+8. Information Extraction
+9. Information Retrieval and Text Mining
+10. Interpretability and Analysis of Models for NLP
+11. Language Modeling
+12. Linguistic theories, Cognitive Modeling and Psycholinguistics
+13. Machine Learning for NLP
+14. Machine Translation
+15. Multilinguality and Language Diversity
+16. Multimodality and Language Grounding to Vision, Robotics and Beyond
+17. NLP Applications
+18. Phonology, Morphology and Word Segmentation
+19. Question Answering
+20. Resources and Evaluation
+21. Semantics: Lexical and Sentence-Level
+22. Sentiment Analysis, Stylistic Analysis, and Argument Mining
+23. Special Theme: Generalization of NLP Models
+24. Speech recognition, text-to-speech and spoken language understanding
+25. Summarization
+26. Syntax: Tagging, Chunking and Parsing
