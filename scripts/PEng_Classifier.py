@@ -7,6 +7,8 @@ import dashscope
 from dashscope import Generation
 from http import HTTPStatus 
 from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 
 # Configuration
 dashscope.api_key = 'sk-cc3a2097a12e4c22a3c72e57ffd0b3bb'
@@ -51,7 +53,7 @@ Track:"""
 def get_qwen_prediction(prompt: str) -> str:
     try:
         # Use Generation.call with the recommended 'messages' format for chat models
-        response = Generation.call(model='qwen-plus-latest',
+        response = Generation.call(model='qwen-turbo-latest',
                             prompt=prompt,temperature=0.1
         )
 
@@ -76,7 +78,7 @@ def main():
         test_set, unique_tracks, few_shot_examples = load_data(INPUT_CSV_PATH)
         ground_truth = []
         predictions = []
-        count = 0
+
 
         for _, row in tqdm(test_set.iterrows(), total=test_set.shape[0]):
             try:
@@ -91,9 +93,7 @@ def main():
                 print(f"Error processing row: {str(e)}")
                 predictions.append("Unknown")
                 ground_truth.append(row['Track Theme'])
-            count += 1
-            if count == 500:
-                break  # Limit to 500 predictions for testing
+
         # Get all unique classes from both predictions and ground truth
         pred_classes = sorted(list(set(predictions)))
         if "Unknown" in pred_classes:
@@ -121,6 +121,16 @@ def main():
 
         print("\nClassification Report:")
         print(classification_report(ground_truth, predictions, target_names=pred_classes))
+
+
+        cm = ConfusionMatrixDisplay.from_predictions(ground_truth, predictions, display_labels=pred_classes, cmap=plt.cm.get_cmap('Blues'))
+        plt.title("Confusion Matrix")
+        plt.savefig("confusion_matrix.png")
+        plt.close()
+
+        report = classification_report(ground_truth, predictions, target_names=pred_classes, output_dict=False)
+        with open("classification_report.txt", "w") as f:
+            f.write(str(report))
 
     except Exception as e:
         print(f"Error in main execution: {str(e)}")
