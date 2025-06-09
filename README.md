@@ -34,12 +34,10 @@ The project is currently in the data analysis, classification, and retrieval sta
 - Visualization tools for presenting research trends and connections
 
 ### Latest Changes
-- Added improved SciBERT fine-tuning for NLP research paper track classification
-- Developed weighted loss functions to handle imbalanced data in research theme classification
-- Implemented comprehensive evaluation metrics for classification performance
-- Created visualization tools for track distribution and research trends
-- Added scripts for automated extraction of researcher information and paper metadata
-- Enhanced database schema for future AWS deployment
+- Integrated DashScope API for improved classification and prediction
+- Added functionality to save confusion matrix as PNG and classification report as TXT
+- Enhanced scripts for automated extraction of researcher information and paper metadata
+- Improved database schema for future AWS deployment
 
 ## Future Development Roadmap
 
@@ -86,35 +84,6 @@ tensorboard
 1. Clone this repository
 2. Install required packages: `pip install -r requirements.txt`
 3. Run data collection scripts to populate local datasets
-
-## Project Structure
-```
-AI_Researcher_Network/
-├── data/
-│   ├── acl_collections.txt
-│   ├── ACL25 Accepted Paper with Track Info.csv
-│   ├── ACL25_ThemeData.csv
-│   ├── Conference Submission Topics.xlsx
-│   ├── NLP_topics.csv
-│   └── papers_data.csv
-├── scripts/
-│   ├── anthology_test.py
-│   ├── dedupe_topics.py
-│   ├── paper_table.py
-│   ├── researcher_table.py
-│   ├── scholarly_test.py
-│   ├── serpapi_test.py
-│   ├── Theme_Classifier.py
-│   └── track_distribution.py
-├── visualizations/
-│   ├── confusion_matrix.png
-│   ├── eric_xing_network.png
-│   └── track_distribution.png
-├── prompt.md
-├── requirements.txt
-├── test.py
-└── README.md
-```
 
 ## Contributors
 - Eric Chen

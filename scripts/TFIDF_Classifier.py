@@ -260,9 +260,9 @@ def main():
     print_metrics(tfidf_metrics, "TF-IDF Classifier")
     
     # Save detailed metrics to CSV
-    metrics_df = pd.DataFrame([tfidf_metrics])
-    metrics_df.to_csv('tfidf_classifier_metrics.csv', index=False)
-    print("Detailed metrics saved to 'tfidf_classifier_metrics.csv'")
+    # metrics_df = pd.DataFrame([tfidf_metrics])
+    # metrics_df.to_csv('tfidf_classifier_metrics.csv', index=False)
+    # print("Detailed metrics saved to 'tfidf_classifier_metrics.csv'")
 
 if __name__ == "__main__":
     main()

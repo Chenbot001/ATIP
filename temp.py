@@ -1,3 +1,5 @@
+import os
+import sys
 from http import HTTPStatus
 import dashscope
 from dashscope import Generation
@@ -16,5 +18,8 @@ def sync_dashscope_sample():
                                                    responses.message))
 
 if __name__ == '__main__':
-    dashscope.api_key = 'sk-cc3a2097a12e4c22a3c72e57ffd0b3bb'
+    dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+    if not dashscope.api_key:
+        print("Error: DASHSCOPE_API_KEY environment variable is not set.")
+        sys.exit(1)
     sync_dashscope_sample()

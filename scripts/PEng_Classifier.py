@@ -11,7 +11,10 @@ from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
 # Configuration
-dashscope.api_key = 'sk-cc3a2097a12e4c22a3c72e57ffd0b3bb'
+dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
+if not dashscope.api_key:
+    print("Error: DASHSCOPE_API_KEY environment variable is not set.")
+    sys.exit(1)
 
 INPUT_CSV_PATH = "C:/Eric/Projects/AI_Researcher_Network/data/ACL25_ThemeData.csv"
 
