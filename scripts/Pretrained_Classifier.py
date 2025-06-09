@@ -2,26 +2,23 @@
 # -*- coding: utf-8 -*-
 
 """
-ACL Paper Track Classification using Pretrained Models
+ACL Paper Track Classification using TF-IDF
 =====================================================
 
-This script uses pretrained BERT and SciBERT models without fine-tuning to classify 
+This script uses TF-IDF vectorization and a Logistic Regression classifier to categorize
 ACL research papers into their respective tracks based on their titles and abstracts.
-It evaluates the performance of these models on the ACL25_ThemeData dataset.
+It evaluates the performance on the ACL25_ThemeData dataset.
 
 Author: Eric Chen & GitHub Copilot
-Date: June 8, 2025
+Date: June 9, 2025
 """
 
 # I. Imports - All necessary libraries
 import os
-import json
 import numpy as np
 import pandas as pd
-import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 from sklearn.metrics import (
     accuracy_score, 
     precision_recall_fscore_support, 
@@ -29,17 +26,8 @@ from sklearn.metrics import (
 )
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
-from sklearn.neighbors import KNeighborsClassifier
-from transformers import (
-    AutoTokenizer, 
-    AutoModel
-)
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-
-# Check for GPU availability
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
 
 def load_data(csv_path):
     """
@@ -162,108 +150,11 @@ def plot_confusion_matrix(y_true, y_pred, labels, model_name):
     # Close the figure to free memory
     plt.close()
 
-def extract_embeddings(texts, model, tokenizer, max_length=512):
-    """
-    Extract embeddings from a pretrained model
-    
-    Args:
-        texts (list): List of text inputs
-        model: Pretrained model
-        tokenizer: Tokenizer for the model
-        max_length (int): Maximum sequence length
-        
-    Returns:
-        np.ndarray: Array of embeddings
-    """
-    embeddings = []
-    batch_size = 8  # Process in small batches to avoid memory issues
-    
-    # Process texts in batches
-    for i in tqdm(range(0, len(texts), batch_size), desc=f"Extracting embeddings"):
-        batch_texts = texts[i:i + batch_size]
-        
-        # Tokenize
-        inputs = tokenizer(
-            batch_texts,
-            padding=True,
-            truncation=True,
-            max_length=max_length,
-            return_tensors='pt'
-        ).to(device)
-        
-        # Get embeddings
-        with torch.no_grad():
-            outputs = model(**inputs)
-            # Use the [CLS] token embedding as the sentence embedding
-            batch_embeddings = outputs.last_hidden_state[:, 0, :].cpu().numpy()
-        
-        embeddings.extend(batch_embeddings)
-    
-    return np.array(embeddings)
 
-def classify_with_pretrained_model(model_name, model_path, df, label_encoder):
-    """
-    Classify papers using pretrained embeddings and a simple classifier
-    
-    Args:
-        model_name (str): Name of the model for reporting
-        model_path (str): Path or name of the pretrained model
-        df (pd.DataFrame): DataFrame with the data
-        label_encoder (LabelEncoder): Fitted label encoder
-        
-    Returns:
-        dict: Dictionary of metrics
-    """
-    print(f"\n===== Evaluating {model_name} =====")
-    
-    # Split data
-    train_df, test_df = train_test_split(
-        df, test_size=0.2, random_state=42, stratify=df['label_id']
-    )
-    
-    # Load model and tokenizer
-    print(f"Loading {model_name} model and tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(model_path)
-    model = AutoModel.from_pretrained(model_path).to(device)
-    
-    # Extract embeddings
-    print("Extracting embeddings for training data...")
-    train_embeddings = extract_embeddings(
-        train_df['text_input'].tolist(), model, tokenizer
-    )
-    
-    print("Extracting embeddings for test data...")
-    test_embeddings = extract_embeddings(
-        test_df['text_input'].tolist(), model, tokenizer
-    )
-    
-    # Train a simple classifier on top of the embeddings
-    print("Training a logistic regression classifier on embeddings...")
-    classifier = LogisticRegression(
-        max_iter=1000, class_weight='balanced', n_jobs=-1
-    )
-    classifier.fit(train_embeddings, train_df['label_id'])
-    
-    # Predict
-    print("Making predictions...")
-    test_pred = classifier.predict(test_embeddings)
-    
-    # Compute metrics
-    metrics = compute_metrics(test_df['label_id'], test_pred)
-    
-    # Plot confusion matrix
-    plot_confusion_matrix(
-        test_df['label_id'], 
-        test_pred,
-        label_encoder.classes_,
-        model_name
-    )
-    
-    return metrics, test_df['label_id'], test_pred
 
 def classify_with_tfidf(df, label_encoder):
     """
-    Classify papers using TF-IDF and a simple classifier as baseline
+    Classify papers using TF-IDF and a Logistic Regression classifier
     
     Args:
         df (pd.DataFrame): DataFrame with the data
@@ -272,7 +163,7 @@ def classify_with_tfidf(df, label_encoder):
     Returns:
         dict: Dictionary of metrics
     """
-    print("\n===== Evaluating TF-IDF Baseline =====")
+    print("\n===== Evaluating TF-IDF Classifier =====")
     
     # Split data
     train_df, test_df = train_test_split(
@@ -283,16 +174,23 @@ def classify_with_tfidf(df, label_encoder):
     print("Extracting TF-IDF features...")
     tfidf = TfidfVectorizer(
         max_features=10000,
-        stop_words='english'
+        stop_words='english',
+        ngram_range=(1, 2)  # Include bigrams
     )
     
     train_features = tfidf.fit_transform(train_df['text_input'])
     test_features = tfidf.transform(test_df['text_input'])
     
-    # Train a simple classifier
+    print(f"TF-IDF features shape: {train_features.shape}")
+    
+    # Train a logistic regression classifier
     print("Training a logistic regression classifier on TF-IDF features...")
     classifier = LogisticRegression(
-        max_iter=1000, class_weight='balanced', n_jobs=-1
+        max_iter=1000, 
+        class_weight='balanced', 
+        n_jobs=-1,
+        C=1.0,
+        solver='liblinear'
     )
     classifier.fit(train_features, train_df['label_id'])
     
@@ -308,8 +206,19 @@ def classify_with_tfidf(df, label_encoder):
         test_df['label_id'], 
         test_pred,
         label_encoder.classes_,
-        "TF-IDF Baseline"
+        "TF-IDF Classifier"
     )
+    
+    # Save the model
+    model_dir = "./models"
+    os.makedirs(model_dir, exist_ok=True)
+    
+    # Import needed for saving the model
+    import joblib
+    joblib.dump(classifier, f"{model_dir}/tfidf_classifier.joblib")
+    joblib.dump(tfidf, f"{model_dir}/tfidf_vectorizer.joblib")
+    joblib.dump(label_encoder, f"{model_dir}/label_encoder.joblib")
+    print(f"Model and vectorizer saved to {model_dir}/")
     
     return metrics, test_df['label_id'], test_pred
 
@@ -328,63 +237,32 @@ def print_metrics(metrics, model_name):
     print(f"Weighted-F1 Score: {metrics['f1_weighted']:.4f}")
     print("==================================\n")
     
-    # Print detailed metrics
-    # print(f"Detailed {model_name} metrics:")
-    # for key, value in metrics.items():
-    #     print(f"  {key}: {value:.4f}")
+    # Print more detailed metrics
+    print(f"Detailed {model_name} metrics:")
+    print(f"  Precision (macro): {metrics['precision_macro']:.4f}")
+    print(f"  Recall (macro): {metrics['recall_macro']:.4f}")
+    print(f"  Precision (weighted): {metrics['precision_weighted']:.4f}")
+    print(f"  Recall (weighted): {metrics['recall_weighted']:.4f}")
+    print("==================================\n")
 
 def main():
     """
-    Main function to run the evaluation
+    Main function to run the TF-IDF classification
     """
     # Path to data
-    data_path = "C:\\Eric\\Projects\\AI_Researcher_Network\\data\\ACL25_ThemeData.csv"
+    data_path = ".\\data\\ACL25_ThemeData.csv"
     
     # Load data
     df, label_encoder, unique_labels = load_data(data_path)
     
-    # Get metrics for TF-IDF baseline
+    # Get metrics for TF-IDF classifier
     tfidf_metrics, _, _ = classify_with_tfidf(df, label_encoder)
-    print_metrics(tfidf_metrics, "TF-IDF Baseline")
+    print_metrics(tfidf_metrics, "TF-IDF Classifier")
     
-    # Get metrics for BERT
-    bert_metrics, _, _ = classify_with_pretrained_model(
-        "BERT", "bert-base-uncased", df, label_encoder
-    )
-    print_metrics(bert_metrics, "BERT")
-    
-    # Get metrics for SciBERT
-    scibert_metrics, _, _ = classify_with_pretrained_model(
-        "SciBERT", "allenai/scibert_scivocab_uncased", df, label_encoder
-    )
-    print_metrics(scibert_metrics, "SciBERT")
-    
-    # Compare models
-    print("\n===== Model Comparison =====")
-    comparison_metrics = ['accuracy', 'f1_micro', 'f1_macro', 'f1_weighted']
-    models = {
-        "TF-IDF": tfidf_metrics,
-        "BERT": bert_metrics,
-        "SciBERT": scibert_metrics
-    }
-    
-    comparison_df = pd.DataFrame({
-        model_name: [metrics[m] for m in comparison_metrics]
-        for model_name, metrics in models.items()
-    }, index=comparison_metrics)
-    
-    print(comparison_df)
-    
-    # Plot comparison
-    plt.figure(figsize=(10, 6))
-    comparison_df.plot(kind='bar', ax=plt.gca())
-    plt.title('Model Comparison', fontsize=16)
-    plt.ylabel('Score', fontsize=14)
-    plt.xlabel('Metric', fontsize=14)
-    plt.xticks(rotation=0)
-    plt.tight_layout()
-    plt.savefig('model_comparison.png')
-    print("Model comparison chart saved to 'model_comparison.png'")
+    # Save detailed metrics to CSV
+    metrics_df = pd.DataFrame([tfidf_metrics])
+    metrics_df.to_csv('tfidf_classifier_metrics.csv', index=False)
+    print("Detailed metrics saved to 'tfidf_classifier_metrics.csv'")
 
 if __name__ == "__main__":
     main()
