@@ -143,7 +143,7 @@ def plot_confusion_matrix(y_true, y_pred, labels, model_name):
     plt.tight_layout()  # Adjust layout to make sure labels fit
 
     # Save the figure to a file
-    output_path = f"confusion_matrix_{model_name.lower().replace(' ', '_')}.png"
+    output_path = f"./visualizations/confusion_matrix_{model_name.lower().replace(' ', '_')}.png"
     plt.savefig(output_path)
     print(f"Confusion matrix plot saved to {output_path}")
     
@@ -210,7 +210,7 @@ def classify_with_tfidf(df, label_encoder):
     )
     
     # Save the model
-    model_dir = "./models"
+    model_dir = "./tfidf_classifier_model"
     os.makedirs(model_dir, exist_ok=True)
     
     # Import needed for saving the model

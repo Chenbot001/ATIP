@@ -30,7 +30,7 @@ def analyze_track_distribution(csv_path):
     df = pd.read_csv(csv_path)
     
     # Count papers in each track theme
-    track_counts = df['Track Theme'].value_counts().reset_index()
+    track_counts = df['tracks'].value_counts().reset_index()
     track_counts.columns = ['Track Theme', 'Number of Papers']
       # Print the results
     print("\nDistribution of papers across track themes:")
@@ -52,7 +52,7 @@ def analyze_track_distribution(csv_path):
     print(f"Total Papers: {total_papers}")
     
     # Visualize the distribution
-    plot_distribution(track_counts)
+    # plot_distribution(track_counts)
     
 def plot_distribution(track_counts):
     """
@@ -90,7 +90,7 @@ def plot_distribution(track_counts):
         ax.text(row._2 + 0.3, i, f"{row._2} ({row.Percentage}%)", va='center')
     
     # Ensure output directory exists
-    os.makedirs('../visualizations', exist_ok=True)
+    os.makedirs('./visualizations', exist_ok=True)
     
     # Save the figure
     plt.tight_layout()
@@ -100,7 +100,7 @@ def plot_distribution(track_counts):
     
 if __name__ == "__main__":
     # Path to data
-    data_path = "C:\\Eric\\Projects\\AI_Researcher_Network\\data\\ACL25_ThemeData.csv"
-    
+    data_path = "C:\\Eric\\Projects\\AI_Researcher_Network\\data\\papers_data_classified.csv"
+
     # Analyze track distribution
     analyze_track_distribution(data_path)
