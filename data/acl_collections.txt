@@ -1,13 +1,3 @@
-2000.acl
-2000.naacl
-2005.emnlp
-2012.acl
-2012.naacl
-2018.acl
-2018.emnlp
-2018.naacl
-2019.acl
-2019.naacl
 2020.aacl
 2020.acl
 2020.emnlp
