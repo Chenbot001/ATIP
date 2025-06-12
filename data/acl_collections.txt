@@ -1,13 +1,10 @@
-2020.aacl
 2020.acl
 2020.emnlp
 2020.findings
 2021.acl
-2021.eacl
 2021.emnlp
 2021.findings
 2021.naacl
-2022.aacl
 2022.acl
 2022.emnlp
 2022.findings
@@ -15,7 +12,6 @@
 2023.acl
 2023.emnlp
 2023.findings
-2023.ijcnlp
 2024.acl
 2024.emnlp
 2024.findings
