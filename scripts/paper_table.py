@@ -33,14 +33,8 @@ def save_papers_to_csv(papers_df, csv_file='papers_data.csv'):
     Returns:
         None
     """
-    # Check if the file exists to determine whether to write headers
-    file_exists = os.path.isfile(csv_file)
-    
-    # Save the DataFrame to CSV
-    mode = 'a' if file_exists else 'w'
-    header = not file_exists
-    
-    papers_df.to_csv(csv_file, mode=mode, header=header, index=False, encoding='utf-8')
+    # Always overwrite the file to ensure outdated data is replaced
+    papers_df.to_csv(csv_file, mode='w', header=True, index=False, encoding='utf-8')
     print(f"Data saved to {csv_file}")
 
 def search_collection(anthology, collection_id=""):
@@ -64,29 +58,28 @@ def search_collection(anthology, collection_id=""):
     # Create a list to store all paper data
     papers_data = []
     
-    print(f"Analyzing collection: {collection.id}\n")
-    
     for volume in collection.volumes():
         volume_papers = 0
         for paper in volume.papers():
             # Extract paper information
-            paper_doi = paper.doi
-            
-            # Skip entries that don't have a DOI (likely not papers but volume info)
-            if not paper_doi:
-                continue
+            paper_id = paper.full_id
                 
             # Count statistics
             volume_papers += 1
             total_papers += 1
             
+            paper_doi = paper.doi
+            if paper_doi is None:
+                continue  # Skip papers without DOI
+
             title = paper.title
             abstract = paper.abstract
-            venue = anthology.venues[paper.venue_ids[0]].name if paper.venue_ids else ''
+            venue = anthology.venues[paper.venue_ids[0]].acronym if paper.venue_ids else ''
             year = paper.year
             tracks = None  # This will be filled with data using a different script
             
             papers_data.append({
+                'paper_id': paper_id,
                 'paper_doi': paper_doi,
                 'title': title,
                 'abstract': abstract,
@@ -95,12 +88,12 @@ def search_collection(anthology, collection_id=""):
                 'tracks': tracks
             })
         
-        print(f"Volume: {volume.title}")
-        print(f"  Number of papers: {volume_papers}")
+        # print(f"Volume: {volume.title}")
+        # print(f"  Number of papers: {volume_papers}")
     
 
     papers_df = pd.DataFrame(papers_data)
-    print(f"Total {total_papers} papers across all volumes in collection {collection.id}:")
+    # print(f"Total {total_papers} papers across all volumes in collection {collection.id}:")
 
     return papers_df
 
@@ -119,13 +112,32 @@ def main():
         print(f"Error initializing anthology: {e}")
         print("Could not initialize anthology. Make sure the data is available.")
         sys.exit(1)
-    
-    # Search the collection and get paper data
-    papers_df = search_collection(anthology, collection_id="2024.acl")
 
-    
-    # Save the data to CSV
-    save_papers_to_csv(papers_df, csv_file='data/papers_data.csv')
+    # Read all collection IDs from acl_collections.txt
+    with open("c:\\Users\\ssr\\EJC\\AI_Researcher_Network\\data\\acl_collections.txt", "r") as file:
+        collection_ids = [line.strip() for line in file]
+
+    # Initialize an empty DataFrame to accumulate all paper data
+    all_papers_df = pd.DataFrame()
+
+    # Initialize counters for collections and papers
+    total_collections = 0
+    total_papers = 0
+
+    for collection_id in collection_ids:
+        print(f"Processing collection: {collection_id}")
+        papers_df = search_collection(anthology, collection_id=collection_id)
+        all_papers_df = pd.concat([all_papers_df, papers_df], ignore_index=True)
+        total_collections += 1
+        total_papers += len(papers_df)
+
+    # Save the accumulated data to CSV
+    if not all_papers_df.empty:
+        save_papers_to_csv(all_papers_df, csv_file='../data/papers_data.csv')
+
+    # Display total counts
+    print(f"\nTotal collections processed: {total_collections}")
+    print(f"Total papers collected: {total_papers}")
 
     print("Script completed successfully.")
 
