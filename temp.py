@@ -1,25 +1,42 @@
-import os
-import sys
-from http import HTTPStatus
-import dashscope
-from dashscope import Generation
-# export DASHSCOPE_API_KEY='YOUR-DASHSCOPE-API-KEY' in environment
-def sync_dashscope_sample():
-    responses = Generation.call(
-        model=Generation.Models.qwen_plus,
-        prompt='Is the API connection working?',
-        temperature=0.1,)
+from acl_anthology import Anthology
 
-    if responses.status_code == HTTPStatus.OK:
-        print('Result is: %s'%responses.output.text)
-    else:
-        print('Code: %s, status_code: %s, code: %s, message: %s'%(responses.status_code,
-                                                   responses.code,
-                                                   responses.message))
+def search_collection():
+    collection = anthology.get("2024.findings")
+    all_unique_authors = set()
+    total_papers = 0
+    
+    print(f"Analyzing collection: {collection.id}\n")
+    
+    for volume in collection.volumes():
+        volume_papers = 0
+        volume_unique_authors = set()
+        
+        for paper in volume.papers():
+            volume_papers += 1
+            total_papers += 1
+            for author in paper.authors:
+                researcher = author.name
+                volume_unique_authors.add(researcher)
+                all_unique_authors.add(researcher)
+        
+        print(f"Volume: {volume.title}")
+        print(f"  Number of papers: {volume_papers}")
+        print(f"  Number of unique authors: {len(volume_unique_authors)}\n")
 
-if __name__ == '__main__':
-    dashscope.api_key = os.getenv("DASHSCOPE_API_KEY")
-    if not dashscope.api_key:
-        print("Error: DASHSCOPE_API_KEY environment variable is not set.")
-        sys.exit(1)
-    sync_dashscope_sample()
+    print(f"Total {total_papers} papers and unique authors across all volumes in collection {collection.id}: {len(all_unique_authors)}")
+
+ 
+if __name__ == "__main__":
+
+    try:
+        anthology = Anthology.from_repo()
+    except:
+        try:
+            anthology = Anthology()
+        except:
+            print("Could not initialize anthology. Make sure the data is available.")
+            import sys
+            sys.exit(1)
+
+    search_collection()
+
