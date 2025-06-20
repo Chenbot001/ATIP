@@ -41,19 +41,19 @@ The project is currently in the data analysis, classification, and retrieval sta
 
 ## Future Development Roadmap
 
-### Near Term (1-3 months)
+### Near Term
 - Complete the data analysis and classification system
 - Deploy the initial database to AWS
 - Develop and test data retrieval APIs
 - Begin work on basic front-end components
 
-### Medium Term (3-6 months)
+### Medium Term
 - Implement the full database infrastructure
 - Develop the platform UI design and user interaction flows
 - Create advanced search and recommendation features
 - Begin testing with real-world use cases
 
-### Long Term (6+ months)
+### Long Term
 - Launch the complete platform with all core features
 - Integrate with other academic databases and repositories
 - Incorporate continuous learning mechanisms to improve recommendations

@@ -1,9 +1,0 @@
-numpy
-pandas
-torch
-scikit-learn
-transformers
-datasets
-tensorboard
-dashscope
-requests
