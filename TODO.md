@@ -21,19 +21,19 @@
 ### **Week 1: Database Setup and Data Aggregation (June 23 - June 29)**
 
 * **Monday - Tuesday:**
-    * **Task:** Set up the cloud database environment.
-    * **Task:** Import all available data from the CSV files (`paper_data`, `paper - award(s)`, `researcher_profile`) into the cloud database.
-    * **Goal:** Have the initial database structure and existing data in place for immediate use.
-
-* **Wednesday - Saturday:**
     * **Task:** Parse and populate the `researcher_profile` table with data from Google Scholar and OpenReview.net.
     * **Goal:** Create a comprehensive list of researcher profiles, filling in the crucial missing information.
 
-* **Sunday:**
+* **Wednesday - Saturday:**
     * **Task:** Create and begin populating the relational tables.
         * **`Authorship` Table:** Link `author_id` to `paper_id`, indicating first authors and corresponding authors.
         * **`Citations` Table:** Create paper-to-paper citation links (`paper_id` to `paper_id`).
     * **Goal:** Establish the core relationships between papers and researchers to support MVP features.
+
+* **Sunday:**
+    * **Task:** Set up the cloud database environment.
+    * **Task:** Import all available data from the CSV files (`paper_data`, `paper - award(s)`, `researcher_profile`) into the cloud database.
+    * **Goal:** Have the initial database structure and existing data in place for immediate use.
 
 ### **Week 2: Classification Model Refinement (June 30 - July 6)**
 
