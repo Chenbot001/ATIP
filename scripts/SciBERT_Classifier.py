@@ -81,14 +81,14 @@ def load_and_preprocess_data(csv_path):
     df = pd.read_csv(csv_path)
     
     # Check if abstract column is available
-    has_abstract = 'abstract' in df.columns
+    has_abstract = 'Abstract' in df.columns
     
     # Create text_input column
     if has_abstract:
         # Combine title and abstract, handle missing abstracts
         df['text_input'] = df.apply(
-            lambda x: x['Title'] + ' [SEP] ' + str(x['abstract']) 
-            if pd.notna(x['abstract']) else x['Title'],
+            lambda x: x['Title'] + ' [SEP] ' + str(x['Abstract']) 
+            if pd.notna(x['Abstract']) else x['Title'],
             axis=1
         )
     else:
@@ -242,7 +242,7 @@ def train_model(train_dataset, val_dataset, num_labels, label2id, id2label):
       # Define training arguments
     print("Setting up training arguments...")
     training_args = TrainingArguments(
-        output_dir="./scibert_acl_classifier_results",
+        output_dir="classifier_models\scibert_ft",
         num_train_epochs=5,
         per_device_train_batch_size=4,
         per_device_eval_batch_size=8,

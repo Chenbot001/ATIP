@@ -50,14 +50,14 @@ def load_data(csv_path):
             raise ValueError(f"Required column '{col}' not found in the dataset")
     
     # Check if abstract column is available
-    has_abstract = 'abstract' in df.columns
+    has_abstract = 'Abstract' in df.columns
     
     # Create text_input column
     if has_abstract:
         # Combine title and abstract, handle missing abstracts
         df['text_input'] = df.apply(
-            lambda x: x['Title'] + ' [SEP] ' + str(x['abstract']) 
-            if pd.notna(x['abstract']) else x['Title'],
+            lambda x: x['Title'] + ' [SEP] ' + str(x['Abstract']) 
+            if pd.notna(x['Abstract']) else x['Title'],
             axis=1
         )
     else:
@@ -210,7 +210,7 @@ def classify_with_tfidf(df, label_encoder):
     )
     
     # Save the model
-    model_dir = "./tfidf_classifier_model"
+    model_dir = "classifier_models/tfidf"
     os.makedirs(model_dir, exist_ok=True)
     
     # Import needed for saving the model
