@@ -17,6 +17,8 @@ Required Libraries:
     - os
     - sys
     - typing
+    - arxiv
+    - thefuzz
 
 Usage:
     python get_abstract.py --input "path/to/input.csv"
@@ -32,6 +34,8 @@ import os
 import sys
 from typing import Optional, Dict, Any, Literal
 from tqdm import tqdm
+import arxiv
+from thefuzz import fuzz
 
 def search_paper_by_title(title: str, api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """
@@ -87,13 +91,63 @@ def search_paper_by_title(title: str, api_key: Optional[str] = None) -> Optional
         print(f"Unexpected error for '{title}': {e}")
         return None
 
-def get_abstract_by_title(title: str, api_key: Optional[str] = None) -> Optional[str]:
+def search_arxiv_by_title(title: str, min_similarity_score: int = 85) -> Optional[str]:
     """
-    Get the abstract of a paper by its title.
+    Search for a paper by title using the arXiv API with advanced search strategies.
     
     Args:
         title (str): The title of the paper to search for.
-        api_key (str, optional): Semantic Scholar API key for higher rate limits.
+        min_similarity_score (int): Minimum similarity score for confident match (default: 85).
+        
+    Returns:
+        Optional[str]: Abstract if found, None otherwise.
+    """
+    if not title or pd.isna(title) or title.strip() == "":
+        return None
+    
+    clean_title = title.strip().replace('–', '-').replace('—', '-')
+    
+    # Strategy 1: Search with the colon removed (often problematic in search queries)
+    title_no_colon = clean_title.replace(":", "")
+    
+    # Strategy 2: Search for just the unique part before the colon
+    title_short = clean_title.split(":")[0] if ":" in clean_title else clean_title
+    
+    # List of search queries to try in order of preference
+    search_queries = [
+        clean_title,      # Try the original title first
+        title_no_colon,   # Then try without the colon
+        title_short       # Finally, try just the unique part
+    ]
+    
+    for query in search_queries:
+        try:
+            search = arxiv.Search(query=query, max_results=5)
+            results = list(search.results())
+            
+            if not results:
+                continue
+            
+            for result in results:
+                score = fuzz.ratio(clean_title.lower(), result.title.lower())
+                
+                if score >= min_similarity_score:
+                    return result.summary.replace('\n', ' ')
+                    
+        except Exception as e:
+            print(f"Error searching arXiv with query '{query}': {e}")
+            continue
+    
+    return None
+
+def get_abstract_by_title(title: str, api_key: Optional[str] = None, source: str = "semantic_scholar") -> Optional[str]:
+    """
+    Get the abstract of a paper by its title using the specified API source.
+    
+    Args:
+        title (str): The title of the paper to search for.
+        api_key (str, optional): API key for higher rate limits (Semantic Scholar only).
+        api_source (str): API source to use ("semantic_scholar" or "arxiv").
         
     Returns:
         Optional[str]: The abstract if found, None otherwise.
@@ -101,16 +155,19 @@ def get_abstract_by_title(title: str, api_key: Optional[str] = None) -> Optional
     if not title or pd.isna(title) or title.strip() == "":
         return None
         
-    paper_data = search_paper_by_title(title.strip(), api_key)
-    
-    if paper_data:
-        abstract = paper_data.get('abstract')
-        if abstract and abstract.strip():
-            return abstract.strip()
+    if source.lower() == "arxiv":
+        return search_arxiv_by_title(title.strip())
+    elif source.lower() == "semantic_scholar":
+        paper_data = search_paper_by_title(title.strip(), api_key)
+        
+        if paper_data:
+            abstract = paper_data.get('abstract')
+            if abstract and abstract.strip():
+                return abstract.strip()
+            else:
+                return None
         else:
             return None
-    else:
-        return None
 
 def save_dataframe_incrementally(df: pd.DataFrame, output_file: str, mode: Literal['w', 'a'] = 'w'):
     """
@@ -138,14 +195,15 @@ def save_dataframe_incrementally(df: pd.DataFrame, output_file: str, mode: Liter
             print(f"Failed to save backup file: {backup_error}")
 
 def process_csv(input_file: str, api_key: Optional[str] = None, 
-                               save_interval: int = 50) -> None:
+                               save_interval: int = 50, source: str = "semantic_scholar") -> None:
     """
     Process a CSV file to add abstracts for each publication title.
     
     Args:
         input_file (str): Path to input CSV file.
-        api_key (str, optional): Semantic Scholar API key for higher rate limits.
+        api_key (str, optional): API key for higher rate limits (Semantic Scholar only).
         save_interval (int): Number of rows to process before saving incrementally.
+        source (str): API source to use ("semantic_scholar" or "arxiv").
     """
     try:
         # Read the CSV file
@@ -156,14 +214,14 @@ def process_csv(input_file: str, api_key: Optional[str] = None,
         if 'Abstract' not in df.columns:
             df['Abstract'] = None
         else:
+            # Ensure the Abstract column is of object (string) dtype to avoid FutureWarning
             df['Abstract'] = df['Abstract'].astype('object')
         
-        # Generate output filename
-        base_name = os.path.splitext(input_file)[0]
-        output_file = f"{base_name}_abs.csv"
+        # Use the input file as the output file (overwrite)
+        output_file = input_file
         
         print(f"Processing {len(df)} rows...")
-        print(f"Output will be saved to: {output_file}")
+        print(f"Results will be saved back to: {output_file}")
         
         # Process each row
         processed_count = 0
@@ -177,20 +235,26 @@ def process_csv(input_file: str, api_key: Optional[str] = None,
                     title = row['Title']
                     
                     # Skip if abstract already exists and is not empty
-                    if pd.notna(row['Abstract']) and str(row['Abstract']).strip() != "":
+                    existing_abstract = row['Abstract']
+                    
+                    if (pd.notna(existing_abstract) and 
+                        str(existing_abstract).strip() != "" and 
+                        str(existing_abstract).strip().lower() != "none" and
+                        str(existing_abstract).strip().lower() != "nan"):
                         pbar.set_postfix({"Status": "Skipped (abstract exists)"})
                         pbar.update(1)
                         processed_count += 1
                         continue
                     
                     # Get abstract
-                    abstract = get_abstract_by_title(title, api_key)
+                    abstract = get_abstract_by_title(title, api_key, source)
+                    
                     
                     # If no abstract found, retry once after waiting (in case of rate limiting)
                     if not abstract:
                         pbar.set_postfix({"Status": "No abstract found, retrying..."})
                         time.sleep(1.5)  # Wait before retry
-                        abstract = get_abstract_by_title(title, api_key)
+                        abstract = get_abstract_by_title(title, api_key, source)
                     
                     if abstract:
                         df.at[index, 'Abstract'] = abstract
@@ -275,9 +339,11 @@ def main():
     # args = parser.parse_args()
     
     # Hardcoded input file path
-    input_file = "C:/Eric/Projects/AI_Researcher_Network/data/ACL25_ThemeData.csv"
+    input_file = "C:/Eric/Projects/AI_Researcher_Network/data/ACL25_ThemeData_abs.csv"
     api_key = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w"
     save_interval = 50
+    # source = "semantic_scholar"
+    source = "arxiv"
     
     # Validate input file
     if not os.path.exists(input_file):
@@ -291,12 +357,13 @@ def main():
     print("Semantic Scholar Abstract Extractor")
     print("=" * 40)
     print(f"Input file: {input_file}")
+    print(f"API source: {source}")
     print(f"API key provided: {'Yes' if api_key else 'No'}")
     print(f"Save interval: {save_interval} rows")
     print("-" * 40)
     
     # Process the CSV file
-    process_csv(input_file, api_key, save_interval)
+    process_csv(input_file, api_key, save_interval, source)
 
 if __name__ == "__main__":
     main()

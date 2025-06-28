@@ -1,106 +1,161 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
+#!/usr/bin/env python3
 """
-ACL Track Distribution Analysis
-===============================
+Track Distribution Calculator
 
-This script analyses and visualizes the distribution of papers across different track themes
-in the ACL25_ThemeData.csv dataset.
+This script calculates the distribution of tracks across:
+1. All papers (with titles)
+2. Papers with available abstracts
 
-Author: Eric Chen & GitHub Copilot
-Date: June 8, 2025
+Input CSV should have columns: 'Track Theme', 'Title', 'Abstract'
 """
 
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
-from collections import Counter
+import argparse
+import sys
+from pathlib import Path
 
-def analyze_track_distribution(csv_path):
+
+def calculate_track_distribution(csv_path):
     """
-    Analyze and display the distribution of papers across different track themes.
+    Calculate track distribution from CSV file.
     
     Args:
-        csv_path (str): Path to the CSV file containing the track theme data
+        csv_path (str): Path to the CSV file
+        
+    Returns:
+        dict: Dictionary containing distribution statistics
     """
-    # Load the data
-    print(f"Loading data from {csv_path}...")
-    df = pd.read_csv(csv_path)
-    
-    # Count papers in each track theme
-    track_counts = df['tracks'].value_counts().reset_index()
-    track_counts.columns = ['Track Theme', 'Number of Papers']
-      # Print the results
-    print("\nDistribution of papers across track themes:")
-    print("=" * 50)
-    
-    # Sort by number of papers in descending order
-    track_counts = track_counts.sort_values(by='Number of Papers', ascending=False)
-    
-    # Calculate total papers and percentages
-    total_papers = track_counts['Number of Papers'].sum()
-    track_counts['Percentage'] = (track_counts['Number of Papers'] / total_papers * 100).round(2)
-    
-    # Print formatted table with percentages
-    print(f"{'Track Theme':<50} | {'Papers':<7} | {'Percentage':<10}")
-    print("-" * 72)
-    for _, row in track_counts.iterrows():
-        print(f"{row['Track Theme']:<50} | {row['Number of Papers']:<7} | {row['Percentage']:<10}%")
-    print("-" * 72)
-    print(f"Total Papers: {total_papers}")
-    
-    # Visualize the distribution
-    # plot_distribution(track_counts)
-    
-def plot_distribution(track_counts):
+    try:
+        # Read the CSV file
+        df = pd.read_csv(csv_path)
+        
+        # Check if required columns exist
+        required_columns = ['Track Theme', 'Title', 'Abstract']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            raise ValueError(f"Missing required columns: {missing_columns}")
+        
+        # Clean the data
+        df = df.dropna(subset=['Title'])  # Remove rows without titles
+        df['Track Theme'] = df['Track Theme'].fillna('Unknown')  # Fill missing track themes
+        
+        # Calculate distributions
+        total_papers = len(df)
+        papers_with_abstracts = df['Abstract'].notna().sum()
+        
+        # Track distribution for all papers
+        all_tracks_dist = df['Track Theme'].value_counts()
+        
+        # Track distribution for papers with abstracts
+        papers_with_abstracts_df = df[df['Abstract'].notna()]
+        abstracts_tracks_dist = papers_with_abstracts_df['Track Theme'].value_counts()
+        
+        # Calculate percentages
+        all_tracks_percentage = (all_tracks_dist / total_papers * 100).round(2)
+        abstracts_tracks_percentage = (abstracts_tracks_dist / papers_with_abstracts * 100).round(2)
+        
+        return {
+            'total_papers': total_papers,
+            'papers_with_abstracts': papers_with_abstracts,
+            'all_tracks_distribution': all_tracks_dist,
+            'abstracts_tracks_distribution': abstracts_tracks_dist,
+            'all_tracks_percentage': all_tracks_percentage,
+            'abstracts_tracks_percentage': abstracts_tracks_percentage
+        }
+        
+    except FileNotFoundError:
+        print(f"Error: File '{csv_path}' not found.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error reading CSV file: {e}")
+        sys.exit(1)
+
+
+def print_distribution_results(results):
     """
-    Create a horizontal bar chart of track distribution.
+    Print the distribution results in a formatted way.
     
     Args:
-        track_counts (DataFrame): DataFrame containing track counts
+        results (dict): Results from calculate_track_distribution
     """
-    plt.figure(figsize=(14, 10))
+    print("=" * 80)
+    print("TRACK DISTRIBUTION ANALYSIS")
+    print("=" * 80)
     
-    # Only show top 30 categories if there are many categories
-    if len(track_counts) > 30:
-        plot_data = track_counts.head(30).copy()
-        title_suffix = " (Top 30 Tracks)"
-    else:
-        plot_data = track_counts.copy()
-        title_suffix = ""
+    print(f"\n📊 OVERVIEW:")
+    print(f"   Total papers: {results['total_papers']:,}")
+    print(f"   Papers with abstracts: {results['papers_with_abstracts']:,}")
+    print(f"   Papers without abstracts: {results['total_papers'] - results['papers_with_abstracts']:,}")
     
-    # Create horizontal bar chart
-    sns.set_style("whitegrid")
-    ax = sns.barplot(
-        y='Track Theme', 
-        x='Number of Papers', 
-        data=plot_data,
-        palette='viridis'
-    )
+    print(f"\n📈 TRACK DISTRIBUTION - ALL PAPERS:")
+    print("-" * 50)
+    print(f"{'Track Theme':<40} {'Count':<10} {'Percentage':<10}")
+    print("-" * 50)
     
-    # Add labels and title
-    plt.title(f'Distribution of Papers Across ACL Track Themes{title_suffix}', fontsize=16)
-    plt.xlabel('Number of Papers', fontsize=12)
-    plt.ylabel('Track Theme', fontsize=12)
+    for track, count in results['all_tracks_distribution'].items():
+        percentage = results['all_tracks_percentage'][track]
+        print(f"{track:<40} {count:<10} {percentage:<10.2f}%")
     
-    # Add count and percentage labels to bars
-    for i, row in enumerate(plot_data.itertuples()):
-        ax.text(row._2 + 0.3, i, f"{row._2} ({row.Percentage}%)", va='center')
+    print(f"\n📈 TRACK DISTRIBUTION - PAPERS WITH ABSTRACTS:")
+    print("-" * 50)
+    print(f"{'Track Theme':<40} {'Count':<10} {'Percentage':<10}")
+    print("-" * 50)
     
-    # Ensure output directory exists
-    os.makedirs('./visualizations', exist_ok=True)
+    for track, count in results['abstracts_tracks_distribution'].items():
+        percentage = results['abstracts_tracks_percentage'][track]
+        print(f"{track:<40} {count:<10} {percentage:<10.2f}%")
     
-    # Save the figure
-    plt.tight_layout()
-    output_path = 'C:\\Eric\\Projects\\AI_Researcher_Network\\visualizations\\track_distribution.png'
-    plt.savefig(output_path)
-    print(f"\nVisualization saved to {output_path}")
+    print("\n" + "=" * 80)
+
+
+def save_results_to_csv(results, output_path):
+    """
+    Save the distribution results to CSV files.
     
+    Args:
+        results (dict): Results from calculate_track_distribution
+        output_path (str): Base path for output files
+    """
+    # Create output directory if it doesn't exist
+    output_dir = Path(output_path).parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save all papers distribution
+    all_papers_df = pd.DataFrame({
+        'Track_Theme': results['all_tracks_distribution'].index,
+        'Count': results['all_tracks_distribution'].values,
+        'Percentage': results['all_tracks_percentage'].values
+    })
+    all_papers_path = f"{output_path}_all_papers.csv"
+    all_papers_df.to_csv(all_papers_path, index=False)
+    print(f"📄 All papers distribution saved to: {all_papers_path}")
+    
+    # Save abstracts distribution
+    abstracts_df = pd.DataFrame({
+        'Track_Theme': results['abstracts_tracks_distribution'].index,
+        'Count': results['abstracts_tracks_distribution'].values,
+        'Percentage': results['abstracts_tracks_percentage'].values
+    })
+    abstracts_path = f"{output_path}_with_abstracts.csv"
+    abstracts_df.to_csv(abstracts_path, index=False)
+    print(f"📄 Papers with abstracts distribution saved to: {abstracts_path}")
+
+
+def main():
+    csv_file = "C:\\Eric\\Projects\\AI_Researcher_Network\\data\\ACL25_ThemeData_abs.csv"
+    
+    # Calculate distribution
+    print(f"🔍 Analyzing track distribution from: {csv_file}")
+    results = calculate_track_distribution(csv_file)
+    
+    # Print results
+    print_distribution_results(results)
+    
+    # Save results if requested
+    # if not args.no_save:
+    #     save_results_to_csv(results, args.output)
+
+
 if __name__ == "__main__":
-    # Path to data
-    data_path = "C:\\Eric\\Projects\\AI_Researcher_Network\\data\\papers_data_classified.csv"
-
-    # Analyze track distribution
-    analyze_track_distribution(data_path)
+    main()

@@ -1,0 +1,33 @@
+﻿Metric Name,Type,Aspect,Tech Stack,Description,What It Measures,Why It Matters for Hiring,Extension
+Adjusted Citation Impact,First Order,Citation,,Total Citations / (Years Since First Pub)^0.5,Career-stage normalized impact,Fair comparison across career stages,
+Citation Acceleration,First Order,Citation,,Citations(Last 2yr) / Citations(Previous 2yr),Research momentum,Identifies rising stars,
+Research Quality,First Order,Quality,,"top venues, best papers/nominations, average citations per paper normalized by year",,,
+Early Career Velocity,First Order,Quality,,h-index / Years Since PhD,Impact growth rate,Predicts future trajectory,
+First-Author Dominance,First Order,Collabration,,First-author citations / Total citations,Independent research capability,Shows leadership potential,
+Industry Collaboration Score,First Order,Collabration,,% papers with industry co-authors,Industry relevance,Important for funding/impact,Similar scores including academia collabration scores. It is important to have all insitutions of a researcher
+Open Source Impact,First Order,Contribution,,GitHub stars + forks across repositories,Practical research value,Shows real-world impact,
+Breakthrough Paper Score,First Order,Contribution,,Papers > 95th percentile citations,Ability to produce seminal work,Indicates research ceiling,"Domain specific, need more detailed analysis
+
+Number of unique co-authors
+International collaboration rate
+Cross-institutional collaboration frequency"
+Technical Diversity Index,First Order,Contribution,,Number of distinct methods used,Research versatility,Adaptability indicator,
+Research Type,First Order,Contribution,,,,,"1. Algorithmic/Methodological
+2. Empirical Studies
+3. Survey & Review Papers
+4. Datasets & Benchmarks
+5. Software & Tools
+6. Foundation Models
+7. Educational contributions, e.g., tutorial, workshop
+8. Community Building, e.g., workshop papers"
+Academic Descendants Impact,Second Order,Citation,,Sum of all students' h-indices,Mentorship quality,Predicts program building ability,As the last author and assuming the first author is the student
+Network Growth Catalyst,Second Order,Collabration,,New collaborations between their co-authors,Community building ability,Creates research ecosystems,
+Bridge Score,Second Order,Collabration,,Betweenness centrality in network,Connects different communities,Brings diverse perspectives,时间信息，network增长速度
+Rising Star Magnet,Second Order,Contribution,,Future stars who sought collaboration,Talent recognition ability,Attracts top researchers,
+Method Adoption Network,Second Order,Contribution,"SQL, LLM",Researchers using their methods,True intellectual influence,Creates research standards,
+Academic Lineage Velocity,Second Order,Collabration,,Time for students to become advisors,Speed of creating researchers,Quick impact multiplication,
+Second-Degree Collaboration Quality,Second Order,Citation,,Avg h-index of collaborators' collaborators,Extended network quality,Deep network effects,
+Self-Made Index,Reverse Second Order,Collabration,,Success without advisor / Total success,Independence level,Predicts solo performance,
+Inherited Prestige Score,Reverse Second Order,Citation,,Advisor h-index × institution rank,Starting advantages,Context for achievements,
+Organic Growth Rate,Reverse Second Order,Citation,,Growth after advisor period,Self-sustaining success,Long-term potential,
+Network Independence Score,Reverse Second Order,Collabration,,% collaborators NOT from advisor,Own network building,Relationship skills,
