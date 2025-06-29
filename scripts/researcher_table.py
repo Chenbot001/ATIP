@@ -21,6 +21,7 @@ import os
 import sys
 import hashlib
 import re
+import uuid
 from pathlib import Path
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -30,38 +31,19 @@ from acl_anthology.people.name import Name
 
 def generate_unique_researcher_id(first_name, last_name):
     """
-    Generate a unique researcher ID based on name.
+    Generate a unique researcher ID using UUID.
     
     Args:
         first_name (str): Researcher's first name
         last_name (str): Researcher's last name
-        affiliation (str, optional): Not used in ID generation, kept for backward compatibility
         
     Returns:
-        str: A unique researcher ID
-        generate_unique_researcher_id 函数创建唯一标识符的逻辑如下：
-
-        输入标准化：
-        首先将 first_name 和 last_name 转换为小写并去除前后空格
-        这样可以确保相同名字的不同大小写或格式都会生成相同的 ID 基础
+        str: A unique researcher ID based on UUID
         
-        创建基础标识符：
-        基本标识符是 first_name_last_name 格式
-        这个基础标识符用于区分同名但不同机构的研究者
-        
-        创建唯一哈希：
-        使用 MD5 哈希算法对基础标识符进行处理，生成 32 位哈希值
-        取这个哈希值的前 6 个字符作为唯一后缀
-        使用哈希是为了处理可能的名字冲突，让相同名字的不同人也能获得不同 ID
-        
-        组合最终 ID：
-        最终的 ID 格式为：r_姓_名首字母_哈希后缀
-        例如：r_smith_j_a1b2c3
-        这种格式既包含可读的名字成分，又通过哈希后缀确保唯一性
-        
-        净化 ID：
-        最后使用正则表达式移除所有非字母数字字符和下划线
-        确保生成的 ID 只包含字母、数字和下划线，便于在系统中使用
+    Note:
+        This function uses UUID v5 with a namespace to ensure that the same name
+        always generates the same UUID. It uses the combination of first and last name
+        as the input for UUID generation.
     """
     # Standardize names to avoid case and space issues
     first_name = first_name.strip().lower() if first_name else ""
@@ -70,17 +52,17 @@ def generate_unique_researcher_id(first_name, last_name):
     if not first_name and not last_name:
         return None
     
-    # Create an identifier string (without affiliation)
+    # Create an identifier string
     identifier = f"{first_name}_{last_name}"
     
-    # Use MD5 hash to generate a unique suffix
-    hash_suffix = hashlib.md5(identifier.encode('utf-8')).hexdigest()[:6]
+    # Create a UUID namespace (using a constant UUID to ensure consistency)
+    namespace = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')  # UUID namespace for URLs
     
-    # Combine into final ID format
-    researcher_id = f"r_{last_name}_{first_name[0]}_{hash_suffix}"
+    # Generate a UUID v5 (name-based) using the namespace and identifier
+    researcher_uuid = uuid.uuid5(namespace, identifier)
     
-    # Remove non-alphanumeric characters
-    researcher_id = re.sub(r'[^a-z0-9_]', '', researcher_id)
+    # Format the UUID for use as a researcher ID
+    researcher_id = f"r_{str(researcher_uuid)}"
     
     return researcher_id
 
@@ -118,7 +100,7 @@ def process_author(author):
         last_name = name.last
         affiliation = author.affiliation if hasattr(author, 'affiliation') else None
         
-        # Generate a custom researcher ID
+        # Generate a custom researcher ID using UUID
         researcher_id = generate_unique_researcher_id(first_name, last_name)
         
         # External IDs are set to None as placeholders
@@ -291,6 +273,7 @@ def main():
     except Exception as e:
         print(f"Error: {str(e)}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
