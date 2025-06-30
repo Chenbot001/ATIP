@@ -10,47 +10,21 @@ This phase processes the input CSV and generates the linking-table data.
 
 1.  **Functionality:**
     * Create a main function, e.g., `fetch_relational_data(input_csv_path: str, output_dir: str)`.
-    * **Input Handling:** The function must read the CSV file specified by `input_csv_path` and extract all ACL paper identifiers from its `paper_id` column.
+    * **Input Handling:** The function must read the CSV file specified by `input_csv_path`. For each row, it must read and store both the **`acl_id` and the `title`**. A list of dictionaries or a list of `(acl_id, title)` tuples would be appropriate.
     * **Minibatching:** The total list of paper identifiers must be split into smaller "minibatches" of 500. The script must then loop through these minibatches to perform the API calls.
     * The function should create the `output_dir` if it doesn't exist.
 
 2.  **API Call Workflow:**
     * For each minibatch of 500 identifiers, perform a single batch `POST` request to `https://api.semanticscholar.org/graph/v1/paper/batch`.
     * **ID Formatting:** Crucially, the paper identifiers from the input CSV are external ACL IDs. Before sending a minibatch to the API, the script must format each ID by prepending the `ACL:` prefix. For example, an ID like `2020.acl-main.1` from the CSV must be sent to the API as the string `ACL:2020.acl-main.1`.
-    * **Fields:** Request **only** the following fields: `externalIds`, `authors`, `citations`, and `references`. The `externalIds` field is crucial for linking back to the DOI in our database, and requesting both `citations` and `references` is essential for building a complete relationship graph.
+    * **Fields:** Request **only** the following fields: `paperId`, `corpusId`, `externalIds`.
 
 3.  **Output Files and Population Logic:**
-    * The script should create and append data to the following CSV files in the `output_dir` over the course of the loop.
-    * **`authorships.csv`** (Maps researchers to papers)
-        * Columns: `researcher_id`, `paper_doi`, `is_first_author`, `is_last_author`
-    * **`citations.csv`** (A single, unified table for all citation links)
-        * Columns: `citing_paper_id`, `cited_paper_id`, `is_influential`, `context`
-        * **Note:** Both `citing_paper_id` and `cited_paper_id` **must be the Semantic Scholar IDs** to correctly handle papers from outside the initial ACL set.
-    * **Population Logic for `citations.csv`:** For each paper processed from the API:
-        * Loop through its `references` list. For each `ref`, write a row where the *current paper* is the `citing_paper_id` and the `ref` is the `cited_paper_id`.
-        * Loop through its `citations` list. For each `cit`, write a row where the `cit` is the `citing_paper_id` and the *current paper* is the `cited_paper_id`.
+    * For each minibatch, request for the paper details using the `acl_id` values. If a valid response is returned, then fill in the missing `corpus_id`, `s2_id`(semantic scholar paperId), and `DOI` values into the `paper_info.csv` table.
+    * Save the updated table to a new `paper_info_full.csv` file.
+    * If any or all of the `acl_id` rows return invalid id errors, log the title of the paper found in the `title` column of the input csv to a `invalid_papers.txt` in the `./logs` directory.
+    * The `invalid_papers.txt` should only contain the individual titles on separate rows.
 
-4.  **Collect Unique Author IDs:**
-    * Across all minibatches, collect all unique `authorId`s into a single Python `set`.
-    * After the loop is complete, save this unique set to a text file named **`author_ids_to_fetch.txt`** in the `output_dir`.
-
-### Phase 2: Fetching Researcher Profile Data
-
-This phase uses the collected author IDs to build the researcher profiles.
-
-1.  **Functionality:**
-    * Create a second function, e.g., `fetch_researcher_profiles(output_dir: str)`.
-    * It should read all author IDs from the `author_ids_to_fetch.txt` file.
-    * **Minibatching:** This list of author IDs must also be split into minibatches of 500. The script will loop through these minibatches to make API calls.
-
-2.  **API Call:**
-    * For each minibatch of author IDs, perform a `POST` request to `https://api.semanticscholar.org/graph/v1/author/batch`.
-    * Request the fields: `name`, `hIndex`, `citationCount`, `affiliations`.
-
-3.  **Output File and Columns:**
-    * Create the final CSV file for the researcher profiles.
-    * **`researcher_profiles.csv`**
-        * Columns: `researcher_id`, `first_name`, `last_name`, `h_index`, `total_citations`, `latest_affiliation`
 
 ### Technical Specifications & Best Practices
 
@@ -61,25 +35,3 @@ This phase uses the collected author IDs to build the researcher profiles.
 * **Error Handling:** The script must gracefully handle API errors (e.g., non-200 status codes) and safely handle missing or `null` data in the API response.
 * **API Key:** Structure the script with a variable at the top (e.g., `S2_API_KEY = "YOUR_KEY_HERE"`) that can be easily edited and passed in the request headers.
 * **Code Structure:** Use clear functions for each phase and a `if __name__ == "__main__":` block to make the script runnable.
-* The `POST` requests for semantic scholar has this general format:
-```r = requests.post(
-    'https://api.semanticscholar.org/graph/v1/paper/batch',
-    params={'fields': 'referenceCount,citationCount,title'},
-    json={"ids": ["649def34f8be52c8b66281af98ae884c09aef38b", "ARXIV:2106.15928"]}
-)
-print(json.dumps(r.json(), indent=2))
-
-[
-  {
-    "paperId": "649def34f8be52c8b66281af98ae884c09aef38b",
-    "title": "Construction of the Literature Graph in Semantic Scholar",
-    "referenceCount": 27,
-    "citationCount": 299
-  },
-  {
-    "paperId": "f712fab0d58ae6492e3cdfc1933dae103ec12d5d",
-    "title": "Reinfection and low cross-immunity as drivers of epidemic resurgence under high seroprevalence: a model-based approach with application to Amazonas, Brazil",
-    "referenceCount": 13,
-    "citationCount": 0
-  }
-]```

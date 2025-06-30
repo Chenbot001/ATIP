@@ -76,7 +76,7 @@ def clean_venues_data(file_path):
         
         # Show unique venues in cleaned data
         venues_series = df_cleaned['venue']
-        unique_venues_cleaned = sorted(venues_series.unique().tolist())
+        unique_venues_cleaned = sorted(venues_series.unique().tolist())  # type: ignore
         print(f"\nUnique venues in cleaned data: {unique_venues_cleaned}")
         
     except FileNotFoundError:
