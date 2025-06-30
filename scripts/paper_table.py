@@ -22,7 +22,7 @@ import pandas as pd
 import os
 import sys
 
-def save_papers_to_csv(papers_df, csv_file='papers_data.csv'):
+def save_papers_to_csv(papers_df, csv_file):
     """
     Save a DataFrame of paper information to a CSV file.
     
@@ -76,16 +76,17 @@ def search_collection(anthology, collection_id=""):
             abstract = paper.abstract
             venue = anthology.venues[paper.venue_ids[0]].acronym if paper.venue_ids else ''
             year = paper.year
-            tracks = None  # This will be filled with data using a different script
             
             papers_data.append({
-                'paper_id': paper_id,
-                'paper_doi': paper_doi,
+                'corpus_id': '',  # Empty for now
+                's2_id': '',      # Empty for now
+                'acl_id': paper_id,
+                'DOI': '',        # Empty for now
                 'title': title,
                 'abstract': abstract,
                 'venue': venue,
                 'year': year,
-                'tracks': tracks
+                'track': ''       # Empty for now
             })
         
         # print(f"Volume: {volume.title}")
@@ -114,7 +115,7 @@ def main():
         sys.exit(1)
 
     # Read all collection IDs from acl_collections.txt
-    with open("c:\\Users\\ssr\\EJC\\AI_Researcher_Network\\data\\acl_collections.txt", "r") as file:
+    with open("C:/Users/ssr/EJC/ATIP/data/acl_collections.txt", "r") as file:
         collection_ids = [line.strip() for line in file]
 
     # Initialize an empty DataFrame to accumulate all paper data
@@ -133,7 +134,7 @@ def main():
 
     # Save the accumulated data to CSV
     if not all_papers_df.empty:
-        save_papers_to_csv(all_papers_df, csv_file='../data/papers_data.csv')
+        save_papers_to_csv(all_papers_df, csv_file='C:/Users/ssr/EJC/ATIP/data/paper_info.csv')
 
     # Display total counts
     print(f"\nTotal collections processed: {total_collections}")
