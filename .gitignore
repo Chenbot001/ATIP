@@ -56,3 +56,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Large data files (>100MB)
+data/coauthors_by_author.csv
+data/*_large.csv
+
+# Backup files
+*.bak
+*.backup
