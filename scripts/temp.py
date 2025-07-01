@@ -1,251 +1,86 @@
+#!/usr/bin/env python3
+"""
+Script to convert corpus_id column from float to integer in paper_info.csv
+"""
+
 import pandas as pd
 import numpy as np
-import requests
-import time
-import json
+import os
 
-def test_missing_values():
+def convert_corpus_id_to_int():
     """
-    Test script to count rows with empty or None values in corpus_id, s2_id, or DOI columns
+    Convert corpus_id column from float to integer in paper_info.csv
     """
-    try:
-        # Load the paper_info.csv file
-        print("Loading paper_info.csv...")
-        df = pd.read_csv('C:/Eric/Projects/AI_Researcher_Network/data/paper_info.csv')
-        
-        print(f"Total rows in dataset: {len(df)}")
-        print(f"Columns in dataset: {list(df.columns)}")
-        
-        # Check if the required columns exist
-        required_columns = ['corpus_id', 's2_id', 'DOI']
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        
-        if missing_columns:
-            print(f"Warning: Missing columns: {missing_columns}")
-            return None, None
-        
-        # Count rows where any of the specified columns is empty or None
-        # Consider empty strings, None, NaN, and whitespace-only strings as empty
-        empty_mask = (
-            df['corpus_id'].isna() | 
-            (df['corpus_id'].astype(str).str.strip() == '') |
-            (df['corpus_id'].astype(str).str.strip() == 'nan') |
-            df['s2_id'].isna() | 
-            (df['s2_id'].astype(str).str.strip() == '') |
-            (df['s2_id'].astype(str).str.strip() == 'nan') |
-            df['DOI'].isna() | 
-            (df['DOI'].astype(str).str.strip() == '') |
-            (df['DOI'].astype(str).str.strip() == 'nan')
-        )
-        
-        rows_with_empty_values = empty_mask.sum()
-        
-        print(f"\nResults:")
-        print(f"Rows with empty or None values in any of (corpus_id, s2_id, DOI): {rows_with_empty_values}")
-        print(f"Percentage of rows with missing values: {(rows_with_empty_values / len(df)) * 100:.2f}%")
-        
-        # Show breakdown by column
-        print(f"\nBreakdown by column:")
-        for col in required_columns:
-            col_empty = (
-                df[col].isna() | 
-                (df[col].astype(str).str.strip() == '') |
-                (df[col].astype(str).str.strip() == 'nan')
-            ).sum()
-            print(f"  {col}: {col_empty} empty values ({col_empty/len(df)*100:.2f}%)")
-        
-        return df, empty_mask
-        
-    except FileNotFoundError:
-        print("Error: paper_info.csv not found in ../data/ directory")
-        return None, None
-    except Exception as e:
-        print(f"Error: {e}")
-        return None, None
+    # File paths
+    input_file = "data/paper_info.csv"
+    output_file = "data/paper_info.csv"  # Overwrite the original file
+    
+    print(f"Reading {input_file}...")
+    
+    # Read the CSV file
+    df = pd.read_csv(input_file)
+    
+    print(f"Original data types:")
+    print(df.dtypes)
+    print(f"\nOriginal corpus_id sample values:")
+    print(df['corpus_id'].head())
+    
+    # Check for any NaN values in corpus_id column
+    nan_count = df['corpus_id'].isna().sum()
+    if nan_count > 0:
+        print(f"\nWarning: Found {nan_count} NaN values in corpus_id column")
+        print("These will be converted to 0 or you may want to handle them differently")
+    
+    # Convert corpus_id from float to int
+    # First fill NaN values with 0 (or you can choose another approach)
+    df['corpus_id'] = df['corpus_id'].fillna(0)
+    
+    # Convert to integer
+    df['corpus_id'] = df['corpus_id'].astype(int)
+    
+    print(f"\nAfter conversion:")
+    print(f"New data types:")
+    print(df.dtypes)
+    print(f"\nNew corpus_id sample values:")
+    print(df['corpus_id'].head())
+    
+    # Check 1: Determine if any corpus_id equals 0
+    zero_count = (df['corpus_id'] == 0).sum()
+    print(f"\nCheck 1 - Zero values in corpus_id:")
+    print(f"Number of rows with corpus_id = 0: {zero_count}")
+    if zero_count > 0:
+        print(f"Percentage of zero values: {(zero_count / len(df)) * 100:.2f}%")
+        print("Sample rows with corpus_id = 0:")
+        print(df[df['corpus_id'] == 0][['corpus_id']].head())
+    
+    # Check 2: Determine if corpus_id contains duplicates
+    duplicate_count = df['corpus_id'].duplicated().sum()
+    unique_count = df['corpus_id'].nunique()
+    total_count = len(df)
+    
+    print(f"\nCheck 2 - Duplicate values in corpus_id:")
+    print(f"Total rows: {total_count}")
+    print(f"Unique corpus_id values: {unique_count}")
+    print(f"Duplicate rows: {duplicate_count}")
+    if duplicate_count > 0:
+        print(f"Percentage of duplicates: {(duplicate_count / total_count) * 100:.2f}%")
+        print("Sample duplicate corpus_id values:")
+        duplicates = df[df['corpus_id'].duplicated(keep=False)].sort_values('corpus_id')
+        print(duplicates[['corpus_id']].head(10))
+    else:
+        print("No duplicate corpus_id values found.")
+    
+    # Save the updated file
+    print(f"\nSaving updated file to {output_file}...")
+    df.to_csv(output_file, index=False)
+    
+    print("Conversion completed successfully!")
+    
+    # Verify the conversion
+    print(f"\nVerification - reading the file back:")
+    df_verify = pd.read_csv(output_file)
+    print(f"corpus_id dtype: {df_verify['corpus_id'].dtype}")
 
-def search_by_title(api_key, title):
-    """
-    Search for a paper by title using Semantic Scholar API
-    
-    Args:
-        api_key (str): Semantic Scholar API key
-        title (str): Paper title to search for
-    
-    Returns:
-        dict: Paper information if found, None otherwise
-    """
-    try:
-        r = requests.get(
-            'https://api.semanticscholar.org/graph/v1/paper/search',
-            headers={'x-api-key': api_key},
-            params={
-                'query': title,
-                'limit': 1,
-                'fields': 'paperId,corpusId,externalIds'
-            },
-            timeout=10
-        )
-        
-        if r.status_code == 200:
-            response = r.json()
-            if response.get('data') and len(response['data']) > 0:
-                paper = response['data'][0]
-                return {
-                    'paperId': paper.get('paperId'),
-                    'corpusId': paper.get('corpusId'),
-                    'externalIds': paper.get('externalIds', {})
-                }
-        return None
-    except Exception as e:
-        print(f"Error searching for title '{title[:50]}...': {e}")
-        return None
-
-def fill_missing_values(df, empty_mask, api_key):
-    """
-    Fill missing values by searching Semantic Scholar API
-    
-    Args:
-        df (pd.DataFrame): DataFrame with paper information
-        empty_mask (pd.Series): Boolean mask of rows with missing values
-        api_key (str): Semantic Scholar API key
-    
-    Returns:
-        pd.DataFrame: Updated DataFrame with filled values
-    """
-    print(f"\nStarting to fill missing values for {empty_mask.sum()} rows...")
-    
-    # Create a copy to avoid modifying the original
-    df_updated = df.copy()
-    filled_count = 0
-    error_count = 0
-    
-    # Get rows with missing values
-    missing_rows = df_updated[empty_mask].copy()
-    
-    for idx, row in missing_rows.iterrows():
-        try:
-            title = row['title']
-            if pd.isna(title) or str(title).strip() == '':
-                print(f"Row {idx}: Skipping - no title available")
-                continue
-                
-            print(f"Row {idx}: Searching for '{title[:60]}...'")
-            
-            # Search for the paper
-            result = search_by_title(api_key, title)
-            
-            if result:
-                # Update missing values
-                updated = False
-                
-                # Fill corpus_id if missing
-                if pd.isna(df_updated.at[idx, 'corpus_id']) or str(df_updated.at[idx, 'corpus_id']).strip() in ['', 'nan']:
-                    if result.get('corpusId'):
-                        df_updated.at[idx, 'corpus_id'] = result['corpusId']
-                        updated = True
-                
-                # Fill s2_id if missing
-                if pd.isna(df_updated.at[idx, 's2_id']) or str(df_updated.at[idx, 's2_id']).strip() in ['', 'nan']:
-                    if result.get('paperId'):
-                        df_updated.at[idx, 's2_id'] = result['paperId']
-                        updated = True
-                
-                # Fill DOI if missing
-                if pd.isna(df_updated.at[idx, 'DOI']) or str(df_updated.at[idx, 'DOI']).strip() in ['', 'nan']:
-                    external_ids = result.get('externalIds', {})
-                    if external_ids.get('DOI'):
-                        df_updated.at[idx, 'DOI'] = external_ids['DOI']
-                        updated = True
-                
-                if updated:
-                    filled_count += 1
-                    print(f"Row {idx}: Successfully filled missing values")
-                else:
-                    print(f"Row {idx}: Found paper but no missing values to fill")
-            else:
-                print(f"Row {idx}: No paper found")
-            
-            # Rate limiting - be respectful to the API
-            time.sleep(0.1)
-            
-        except Exception as e:
-            error_count += 1
-            print(f"Row {idx}: Error processing - {e}")
-            continue
-    
-    print(f"\nFilling complete!")
-    print(f"Successfully filled: {filled_count} rows")
-    print(f"Errors encountered: {error_count} rows")
-    
-    return df_updated
-
-def save_updated_dataframe(df, filename='paper_info_updated.csv'):
-    """
-    Save the updated DataFrame to a new CSV file
-    
-    Args:
-        df (pd.DataFrame): DataFrame to save
-        filename (str): Output filename
-    """
-    try:
-        output_path = f'C:/Eric/Projects/AI_Researcher_Network/data/{filename}'
-        df.to_csv(output_path, index=False)
-        print(f"Updated data saved to: {output_path}")
-    except Exception as e:
-        print(f"Error saving file: {e}")
 
 if __name__ == "__main__":
-    API_KEY = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w"
-    
-    # First, analyze the current state
-    result = test_missing_values()
-    
-    if result[0] is not None and result[1] is not None:
-        df, empty_mask = result
-        
-        # Ask user if they want to proceed with filling missing values
-        print(f"\nFound {empty_mask.sum()} rows with missing values.")
-        response = input("Do you want to attempt to fill missing values using Semantic Scholar API? (y/n): ")
-        
-        if response.lower() in ['y', 'yes']:
-            # Fill missing values
-            df_updated = fill_missing_values(df, empty_mask, API_KEY)
-            
-            # Show updated statistics
-            print("\n" + "="*50)
-            print("UPDATED STATISTICS:")
-            print("="*50)
-            
-            # Recalculate missing values
-            empty_mask_updated = (
-                df_updated['corpus_id'].isna() | 
-                (df_updated['corpus_id'].astype(str).str.strip() == '') |
-                (df_updated['corpus_id'].astype(str).str.strip() == 'nan') |
-                df_updated['s2_id'].isna() | 
-                (df_updated['s2_id'].astype(str).str.strip() == '') |
-                (df_updated['s2_id'].astype(str).str.strip() == 'nan') |
-                df_updated['DOI'].isna() | 
-                (df_updated['DOI'].astype(str).str.strip() == '') |
-                (df_updated['DOI'].astype(str).str.strip() == 'nan')
-            )
-            
-            rows_with_empty_values_updated = empty_mask_updated.sum()
-            print(f"Rows with empty or None values after update: {rows_with_empty_values_updated}")
-            print(f"Percentage of rows with missing values: {(rows_with_empty_values_updated / len(df_updated)) * 100:.2f}%")
-            
-            # Show breakdown by column
-            print(f"\nBreakdown by column:")
-            for col in ['corpus_id', 's2_id', 'DOI']:
-                col_empty = (
-                    df_updated[col].isna() | 
-                    (df_updated[col].astype(str).str.strip() == '') |
-                    (df_updated[col].astype(str).str.strip() == 'nan')
-                ).sum()
-                print(f"  {col}: {col_empty} empty values ({col_empty/len(df_updated)*100:.2f}%)")
-            
-            # Save updated data
-            save_updated_dataframe(df_updated)
-        else:
-            print("Skipping missing value filling.")
-    else:
-        print("Could not load data. Exiting.")
+    convert_corpus_id_to_int() 

@@ -11,14 +11,14 @@ def test_missing_values():
     """
     try:
         # Load the paper_info.csv file
-        print("Loading paper_info.csv...")
-        df = pd.read_csv('./data/paper_info.csv')
+        print("Loading paper_info_updated.csv...")
+        df = pd.read_csv('./data/paper_info_updated.csv')
         
         print(f"Total rows in dataset: {len(df)}")
         print(f"Columns in dataset: {list(df.columns)}")
         
         # Check if the required columns exist
-        required_columns = ['corpus_id', 's2_id', 'DOI']
+        required_columns = ['corpus_id', 's2_id']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
@@ -31,12 +31,10 @@ def test_missing_values():
             df['corpus_id'].isna() | 
             (df['corpus_id'].astype(str).str.strip() == '') |
             (df['corpus_id'].astype(str).str.strip() == 'nan') |
+            (df['corpus_id'] == 0) |
             df['s2_id'].isna() | 
             (df['s2_id'].astype(str).str.strip() == '') |
-            (df['s2_id'].astype(str).str.strip() == 'nan') |
-            df['DOI'].isna() | 
-            (df['DOI'].astype(str).str.strip() == '') |
-            (df['DOI'].astype(str).str.strip() == 'nan')
+            (df['s2_id'].astype(str).str.strip() == 'nan')
         )
         
         rows_with_empty_values = empty_mask.sum()
@@ -48,11 +46,19 @@ def test_missing_values():
         # Show breakdown by column
         print(f"\nBreakdown by column:")
         for col in required_columns:
-            col_empty = (
-                df[col].isna() | 
-                (df[col].astype(str).str.strip() == '') |
-                (df[col].astype(str).str.strip() == 'nan')
-            ).sum()
+            if col == 'corpus_id':
+                col_empty = (
+                    df[col].isna() | 
+                    (df[col].astype(str).str.strip() == '') |
+                    (df[col].astype(str).str.strip() == 'nan') |
+                    (df[col] == 0)
+                ).sum()
+            else:
+                col_empty = (
+                    df[col].isna() | 
+                    (df[col].astype(str).str.strip() == '') |
+                    (df[col].astype(str).str.strip() == 'nan')
+                ).sum()
             print(f"  {col}: {col_empty} empty values ({col_empty/len(df)*100:.2f}%)")
         
         return df, empty_mask
@@ -140,8 +146,8 @@ def fill_missing_values(df, empty_mask, api_key):
                     # Update missing values
                     updated = False
                     
-                    # Fill corpus_id if missing
-                    if pd.isna(df_updated.at[idx, 'corpus_id']) or str(df_updated.at[idx, 'corpus_id']).strip() in ['', 'nan']:
+                    # Fill corpus_id if missing or 0
+                    if pd.isna(df_updated.at[idx, 'corpus_id']) or str(df_updated.at[idx, 'corpus_id']).strip() in ['', 'nan', '0']:
                         if result.get('corpusId'):
                             df_updated.at[idx, 'corpus_id'] = result['corpusId']
                             updated = True
@@ -236,6 +242,7 @@ if __name__ == "__main__":
                 df_updated['corpus_id'].isna() | 
                 (df_updated['corpus_id'].astype(str).str.strip() == '') |
                 (df_updated['corpus_id'].astype(str).str.strip() == 'nan') |
+                (df_updated['corpus_id'] == 0) |
                 df_updated['s2_id'].isna() | 
                 (df_updated['s2_id'].astype(str).str.strip() == '') |
                 (df_updated['s2_id'].astype(str).str.strip() == 'nan') |
@@ -254,7 +261,8 @@ if __name__ == "__main__":
                 col_empty = (
                     df_updated[col].isna() | 
                     (df_updated[col].astype(str).str.strip() == '') |
-                    (df_updated[col].astype(str).str.strip() == 'nan')
+                    (df_updated[col].astype(str).str.strip() == 'nan') |
+                    (df_updated[col] == 0)
                 ).sum()
                 print(f"  {col}: {col_empty} empty values ({col_empty/len(df_updated)*100:.2f}%)")
             
