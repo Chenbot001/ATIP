@@ -12,7 +12,7 @@ def test_missing_values():
     try:
         # Load the paper_info.csv file
         print("Loading paper_info.csv...")
-        df = pd.read_csv('C:/Eric/Projects/AI_Researcher_Network/data/paper_info.csv')
+        df = pd.read_csv('./data/paper_info.csv')
         
         print(f"Total rows in dataset: {len(df)}")
         print(f"Columns in dataset: {list(df.columns)}")
@@ -58,7 +58,7 @@ def test_missing_values():
         return df, empty_mask
         
     except FileNotFoundError:
-        print("Error: paper_info.csv not found in ../data/ directory")
+        print("Error: paper_info.csv not found in ./data/ directory")
         return None, None
     except Exception as e:
         print(f"Error: {e}")
@@ -181,8 +181,8 @@ def fill_missing_values(df, empty_mask, api_key):
         
         # Save the current progress
         try:
-            save_updated_dataframe(df_updated, 'paper_info_interrupted.csv')
-            print("Current progress saved to 'paper_info_interrupted.csv'")
+            save_updated_dataframe(df_updated, 'paper_info_updated.csv')
+            print("Current progress saved to 'paper_info_updated.csv'")
         except Exception as save_error:
             print(f"Error saving interrupted progress: {save_error}")
         
@@ -203,7 +203,7 @@ def save_updated_dataframe(df, filename='paper_info_updated.csv'):
         filename (str): Output filename
     """
     try:
-        output_path = f'C:/Eric/Projects/AI_Researcher_Network/data/{filename}'
+        output_path = f'./data/{filename}'
         df.to_csv(output_path, index=False)
         print(f"Updated data saved to: {output_path}")
     except Exception as e:
