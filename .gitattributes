@@ -1,1 +1,2 @@
 *.safetensors filter=lfs diff=lfs merge=lfs -text
+coauthors_by_author.csv filter=lfs diff=lfs merge=lfs -text
