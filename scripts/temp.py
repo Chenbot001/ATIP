@@ -1,46 +1,67 @@
 import pandas as pd
-import os
+import numpy as np
 
-def add_existence_flags(paper_info_path: str, citation_edges_path: str, output_path: str):
+def compare_h_index_values():
     """
-    Adds boolean flags to citation_edges.csv indicating if citing/cited papers
-    are present in the main paper_info dataset.
+    Compare h_index values between researcher_profiles.csv and researcher_citation_metrics.csv
     """
-    # 1. Load known paper IDs
-    known_paper_ids = set()
-    if os.path.exists(paper_info_path):
-        paper_info_df = pd.read_csv(paper_info_path)
-        if 's2_id' in paper_info_df.columns:
-            known_paper_ids = set(paper_info_df['s2_id'].astype(str)) # Ensure string type
-        print(f"Loaded {len(known_paper_ids)} known paper IDs from {paper_info_path}")
-    else:
-        print(f"Warning: paper_info.csv not found at {paper_info_path}. All papers will be marked as 'not in dataset'.")
+    print("Loading data files...")
+    
+    # Load the data files
+    profiles_df = pd.read_csv('data/researcher_profiles.csv')
+    metrics_df = pd.read_csv('data/researcher_citation_metrics.csv')
+    
+    print(f"Loaded {len(profiles_df)} researcher profiles")
+    print(f"Loaded {len(metrics_df)} researcher citation metrics")
+    
+    # Merge the dataframes on researcher_id
+    merged_df = profiles_df.merge(metrics_df, on='researcher_id', how='inner', suffixes=('_profile', '_metrics'))
+    
+    print(f"Found {len(merged_df)} researchers with data in both files")
+    
+    # Compare h_index values
+    comparison_results = []
+    
+    for _, row in merged_df.iterrows():
+        researcher_id = row['researcher_id']
+        profile_h_index = row['h_index']
+        atip_h_index = row['atip_h_index']
+        
+        # Check if values match
+        match = profile_h_index == atip_h_index
+        
+        comparison_results.append({
+            'researcher_id': researcher_id,
+            'researcher_name': row['researcher_name'],
+            'profile_h_index': profile_h_index,
+            'atip_h_index': atip_h_index,
+            'match': match,
+            'difference': profile_h_index - atip_h_index
+        })
+    
+    # Convert to DataFrame for easier analysis
+    results_df = pd.DataFrame(comparison_results)
+    
+    # Summary statistics
+    print("\n=== SUMMARY STATISTICS ===")
+    print(f"Total researchers compared: {len(results_df)}")
+    print(f"Matching h_index values: {results_df['match'].sum()}")
+    print(f"Non-matching h_index values: {len(results_df) - results_df['match'].sum()}")
+    print(f"Match percentage: {(results_df['match'].sum() / len(results_df) * 100):.2f}%")   
+    # Distribution of differences
+    print(f"\n=== DIFFERENCE STATISTICS ===")
+    print(f"Mean difference (profile - atip): {results_df['difference'].mean():.2f}")
+    print(f"Median difference: {results_df['difference'].median():.2f}")
+    print(f"Standard deviation: {results_df['difference'].std():.2f}")
+    print(f"Min difference: {results_df['difference'].min()}")
+    print(f"Max difference: {results_df['difference'].max()}")    
+    
+    # Save detailed results to CSV
+    output_file = './data/h_index_comparison.csv'
+    results_df.to_csv(output_file, index=False)
+    print(f"\nDetailed results saved to: {output_file}")
+    
+    return results_df
 
-
-    # 2. Load citation edges
-    if not os.path.exists(citation_edges_path):
-        print(f"Error: citation_edges.csv not found at {citation_edges_path}. Cannot add flags.")
-        return
-
-    citation_df = pd.read_csv(citation_edges_path)
-    print(f"Loaded {len(citation_df)} citation edges from {citation_edges_path}")
-
-    # 3. Add boolean columns
-    # Ensure IDs are treated as strings for consistent comparison
-    citation_df['citing_paper_in_dataset'] = citation_df['citing_paper_id'].astype(str).isin(known_paper_ids)
-    citation_df['cited_paper_in_dataset'] = citation_df['cited_paper_id'].astype(str).isin(known_paper_ids)
-
-    # Save the updated DataFrame
-    citation_df.to_csv(output_path, index=False, encoding='utf-8')
-    print(f"Updated citation edges with existence flags saved to {output_path}")
-
-# Example Usage (assuming you run this after S2_batch_query_papers.py)
 if __name__ == "__main__":
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(script_dir) # Adjust if your script is nested differently
-
-    input_paper_info = os.path.join(project_root, "data", "paper_info.csv") # Your main list of papers
-    input_citation_edges = os.path.join(project_root, "data", "citation_edges.csv") # Output from previous script
-    output_citation_edges_flagged = os.path.join(project_root, "data", "citation_edges_flagged.csv")
-
-    add_existence_flags(input_paper_info, input_citation_edges, output_citation_edges_flagged)
+    results = compare_h_index_values()

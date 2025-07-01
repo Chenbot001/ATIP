@@ -1,0 +1,102 @@
+CSV FILES STRUCTURE ANALYSIS
+==================================================
+
+1. FILE: ACL25_ThemeData.csv
+   Size: 2.94 MB
+   Total Rows: 3,096
+   Columns (5):
+      1. Accepted To
+      2. Paper ID
+      3. Track Theme
+      4. Title
+      5. Abstract
+
+--------------------------------------------------
+
+3. FILE: authorships.csv
+   Size: 19.64 MB
+   Total Rows: 133,468
+   Columns (6):
+      1. researcher_id
+      2. paper_id
+      3. author_name
+      4. is_first_author
+      5. is_last_author
+      6. paper_title
+
+--------------------------------------------------
+
+4. FILE: citation_edges.csv
+   Size: 90.21 MB
+   Total Rows: 987,571
+   Columns (6):
+      1. citing_paper_id
+      2. cited_paper_id
+      3. is_influential
+      4. context
+      5. citing_paper_in_dataset
+      6. cited_paper_in_dataset
+
+--------------------------------------------------
+
+5. FILE: coauthors_by_paper.csv
+   Size: 4.53 MB
+   Total Rows: 133,468
+   Columns (4):
+      1. paper_id
+      2. researcher_id
+      3. author_name
+      4. authorship_order
+
+--------------------------------------------------
+
+6. FILE: paper_awards.csv
+   Size: 0.01 MB
+   Total Rows: 256
+   Columns (2):
+      1. paper_id
+      2. award
+
+--------------------------------------------------
+
+7. FILE: paper_info_with_citations.csv
+   Size: 28.99 MB
+   Total Rows: 28,102
+   Columns (10):
+      1. corpus_id
+      2. s2_id
+      3. acl_id
+      4. DOI
+      5. title
+      6. abstract
+      7. venue
+      8. year
+      9. track
+     10. citation_count
+
+--------------------------------------------------
+
+8. FILE: researcher_profiles.csv
+   Size: 1.9 MB
+   Total Rows: 56,290
+   Columns (7):
+      1. researcher_id
+      2. first_name
+      3. last_name
+      4. h_index
+      5. total_citations
+      6. latest_affiliation
+      7. homepage
+
+--------------------------------------------------
+
+9. FILE: researcher_yearly_citations.csv
+   Size: 2.22 MB
+   Total Rows: 56,290
+   Columns (3):
+      1. researcher_id
+      2. researcher_name
+      3. citations_by_year
+
+--------------------------------------------------
+

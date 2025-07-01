@@ -68,7 +68,7 @@ def fetch_relational_data(input_csv_path: str, output_dir: str) -> None:
                 # Make API request
                 response = requests.post(
                     'https://api.semanticscholar.org/graph/v1/paper/batch',
-                    params={'fields': 'paperId,externalIds,authors,citations,references,title,citationCount'},
+                    params={'fields': 'paperId,externalIds,authors,citations,references,title'},
                     json={"ids": minibatch},
                     headers=headers
                 )
@@ -128,7 +128,7 @@ def fetch_relational_data(input_csv_path: str, output_dir: str) -> None:
                     citations = paper.get('citations', [])
                     references = paper.get('references', [])
                     paper_title = paper.get('title', '')
-                    citation_count = paper.get('citationCount', '')
+                    
                     # Ensure authors, citations, and references are lists
                     if not isinstance(authors, list):
                         authors = []
@@ -149,7 +149,7 @@ def fetch_relational_data(input_csv_path: str, output_dir: str) -> None:
                             
                             with open(authorships_file, 'a', newline='', encoding='utf-8') as f:
                                 writer = csv.writer(f)
-                                writer.writerow([author_id, paper_id, author_name, is_first, is_last, paper_title, citation_count])
+                                writer.writerow([author_id, paper_id, author_name, is_first, is_last, paper_title])
                     
                     # Process citations (references)
                     for ref in references:

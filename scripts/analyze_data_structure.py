@@ -47,7 +47,7 @@ def main():
     
     # Define paths
     data_folder = Path("./data")
-    output_file = Path("./data/data_structure_analysis.txt")
+    output_file = Path("./docs/data_structure_analysis.txt")
     
     # Ensure data folder exists
     if not data_folder.exists():
