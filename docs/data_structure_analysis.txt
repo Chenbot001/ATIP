@@ -28,7 +28,7 @@ CSV FILES STRUCTURE ANALYSIS
    Size: 19.64 MB
    Total Rows: 133,468
    Columns (6):
-      1. researcher_id
+      1. author_id
       2. paper_id (s2_id)
       3. author_name
       4. is_first_author
@@ -37,7 +37,59 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-4. FILE: citation_edges.csv
+4. FILE: author_citation_metrics.csv
+   Size: 2.46 MB
+   Total Rows: 56,290
+   Columns (5):
+      1. author_id
+      2. author_name
+      3. db_citation_count
+      4. citations_by_year
+      5. atip_h_index
+
+--------------------------------------------------
+
+5. FILE: author_data.csv
+   Size: 2.49 MB
+   Total Rows: 46,810
+   Columns (5):
+      1. author_id
+      2. first_name
+      3. last_name
+      4. openreview_id
+      5. google_scholar_id
+
+--------------------------------------------------
+
+6. FILE: author_data_with_paper.csv
+   Size: 26.17 MB
+   Total Rows: 151,487
+   Columns (7):
+      1. author_id
+      2. first_name
+      3. last_name
+      4. acl_id
+      5. paper_doi
+      6. paper_title
+      7. affiliation
+
+--------------------------------------------------
+
+7. FILE: author_profiles.csv
+   Size: 1.92 MB
+   Total Rows: 56,290
+   Columns (7):
+      1. author_id
+      2. first_name
+      3. last_name
+      4. h_index
+      5. total_citations
+      6. latest_affiliation
+      7. homepage
+
+--------------------------------------------------
+
+8. FILE: citation_edges.csv
    Size: 90.21 MB
    Total Rows: 987,571
    Columns (6):
@@ -50,23 +102,23 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-5. FILE: coauthors_by_paper.csv
+9. FILE: coauthors_by_paper.csv
    Size: 4.53 MB
    Total Rows: 133,468
    Columns (4):
       1. paper_id (corpus_id)
-      2. researcher_id
+      2. author_id
       3. author_name
       4. authorship_order
 
 --------------------------------------------------
 
-6. FILE: h_index_comparison.csv
+10. FILE: h_index_comparison.csv
    Size: 1.94 MB
    Total Rows: 56,290
    Columns (6):
-      1. researcher_id
-      2. researcher_name
+      1. author_id
+      2. author_name
       3. profile_h_index
       4. atip_h_index
       5. match
@@ -74,7 +126,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-7. FILE: paper_awards.csv
+11. FILE: paper_awards.csv
    Size: 0.01 MB
    Total Rows: 251
    Columns (3):
@@ -84,7 +136,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-8. FILE: paper_info.csv
+12. FILE: paper_info.csv
    Size: 28.99 MB
    Total Rows: 28,102
    Columns (10):
@@ -98,32 +150,6 @@ CSV FILES STRUCTURE ANALYSIS
       8. year
       9. track
      10. citation_count
-
---------------------------------------------------
-
-9. FILE: researcher_citation_metrics.csv
-   Size: 2.46 MB
-   Total Rows: 56,290
-   Columns (5):
-      1. researcher_id
-      2. researcher_name
-      3. db_citation_count
-      4. citations_by_year
-      5. atip_h_index
-
---------------------------------------------------
-
-10. FILE: researcher_profiles.csv
-   Size: 1.92 MB
-   Total Rows: 56,290
-   Columns (7):
-      1. researcher_id
-      2. first_name
-      3. last_name
-      4. h_index
-      5. total_citations
-      6. latest_affiliation
-      7. homepage
 
 --------------------------------------------------
 

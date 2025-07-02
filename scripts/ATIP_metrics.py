@@ -3,8 +3,39 @@ import pandas as pd
 import numpy as np
 import datetime
 import json # To parse the 'citations_by_year' string
+import ast # To safely parse Python dictionary strings
 
-def adjusted_citation_impact(author_identifier, df_researcher_citation_metrics, df_authorships, df_paper_info):
+def get_author_id_from_name(full_name: str, df_author_profiles: pd.DataFrame) -> int | None:
+    """
+    Helper function to find author_id from full name using author_profiles.csv
+    
+    Args:
+        full_name (str): The full name of the author (e.g., "John Doe")
+        df_author_profiles (pd.DataFrame): DataFrame loaded from 'author_profiles.csv'
+    
+    Returns:
+        int or None: The author_id if found, None otherwise
+    """
+    # Try exact match first
+    author_row = df_author_profiles[
+        (df_author_profiles['first_name'] + ' ' + df_author_profiles['last_name']) == full_name
+    ]
+    
+    if not author_row.empty:
+        return int(author_row['author_id'].item())
+    
+    # Try case-insensitive match
+    author_row = df_author_profiles[
+        (df_author_profiles['first_name'] + ' ' + df_author_profiles['last_name']).str.lower() == full_name.lower()
+    ]
+    
+    if not author_row.empty:
+        return int(author_row['author_id'].item())
+    
+    print(f"Author '{full_name}' not found in author profiles.")
+    return None
+
+def adjusted_citation_impact(author_id: int, df_author_citation_metrics: pd.DataFrame, df_authorships: pd.DataFrame, df_paper_info: pd.DataFrame):
     """
     Calculates the adjusted citation impact for a given author.
 
@@ -13,8 +44,8 @@ def adjusted_citation_impact(author_identifier, df_researcher_citation_metrics, 
     earliest publication available in the dataset.
 
     Args:
-        author_identifier (str or int): The full name (str) or researcher_id (int) of the author.
-        df_researcher_citation_metrics (pd.DataFrame): DataFrame loaded from 'researcher_citation_metrics.csv'.
+        author_id (int): The author_id of the author.
+        df_author_citation_metrics (pd.DataFrame): DataFrame loaded from 'author_citation_metrics.csv'.
         df_authorships (pd.DataFrame): DataFrame loaded from 'authorships.csv'.
         df_paper_info (pd.DataFrame): DataFrame loaded from 'paper_info.csv'.
 
@@ -24,40 +55,24 @@ def adjusted_citation_impact(author_identifier, df_researcher_citation_metrics, 
                information cannot be found or calculation is not possible.
     """
 
-    # 1. Get the researcher_id if a full name is provided
-    researcher_id = None
-    if isinstance(author_identifier, str):
-        author_row = df_researcher_citation_metrics[df_researcher_citation_metrics['researcher_name'] == author_identifier]
-        if not author_row.empty:
-            researcher_id = author_row['researcher_id'].iloc[0]
-    elif isinstance(author_identifier, int):
-        researcher_id = author_identifier
-    else:
-        print("Invalid author_identifier type. Must be a string (full name) or an integer (researcher_id).")
-        return None, None, None
-
-    if researcher_id is None:
-        print(f"Author '{author_identifier}' not found in researcher citation metrics.")
-        return None, None, None
-
-    # 2. Get the author's total citation count (db_citation_count)
-    citation_data = df_researcher_citation_metrics[df_researcher_citation_metrics['researcher_id'] == researcher_id]
+    # 1. Get the author's total citation count (db_citation_count)
+    citation_data = df_author_citation_metrics[df_author_citation_metrics['author_id'] == author_id]
     if citation_data.empty:
-        print(f"No citation data found for researcher_id: {researcher_id}")
+        print(f"No citation data found for author_id: {author_id}")
         return None, None, None
-    total_citation_count = citation_data['db_citation_count'].iloc[0]
+    total_citation_count = citation_data['db_citation_count'].values[0]
 
-    # 3. Find the author's first publication year
-    author_papers = df_authorships[df_authorships['researcher_id'] == researcher_id]
+    # 2. Find the author's first publication year
+    author_papers = df_authorships[df_authorships['author_id'] == author_id]
     if author_papers.empty:
-        print(f"No papers found for researcher_id: {researcher_id}")
+        print(f"No papers found for author_id: {author_id}")
         return None, None, None
 
-    # Correctly merge df_authorships with df_paper_info using 's2_id' [cite: 1, 3, 5]
+    # Correctly merge df_authorships with df_paper_info using 's2_id'
     merged_papers = pd.merge(author_papers, df_paper_info, left_on='paper_id', right_on='s2_id', how='inner')
 
     if merged_papers.empty:
-        print(f"No matching paper information found for researcher_id: {researcher_id}")
+        print(f"No matching paper information found for author_id: {author_id}")
         return None, None, None
 
     first_publication_year = merged_papers['year'].min()
@@ -66,50 +81,49 @@ def adjusted_citation_impact(author_identifier, df_researcher_citation_metrics, 
         first_publication_year = first_publication_year.item()
 
     if first_publication_year is None or (isinstance(first_publication_year, (int, float)) and pd.isna(first_publication_year)):
-        print(f"Could not determine first publication year for researcher_id: {researcher_id}")
+        print(f"Could not determine first publication year for author_id: {author_id}")
         return None, None, None
 
-    # 4. Calculate adjusted citation impact with the new formula
+    # 3. Calculate adjusted citation impact with the new formula
     # Using 2025 as the current year, as per the context provided.
     current_year = 2025
 
     years_passed = current_year - int(first_publication_year)
 
     if years_passed <= 0: # Handle cases where first publication year is current or future
-        print(f"Years passed for researcher_id {researcher_id} is non-positive ({years_passed}), cannot calculate impact.")
+        print(f"Years passed for author_id {author_id} is non-positive ({years_passed}), cannot calculate impact.")
         return None, None, None
 
     adjusted_impact = float(total_citation_count) / np.sqrt(years_passed)
 
     return adjusted_impact, total_citation_count, int(first_publication_year)
 
-
-def citation_accel(researcher_id, df_researcher_citation_metrics):
+def citation_accel(author_id: int, df_author_citation_metrics: pd.DataFrame):
     """
     Gauges an author's citation acceleration across their years of publication.
     Formula: Citations(Last 2yr) / Citations(Previous 2yr)
 
     Args:
-        researcher_id (int): The researcher_id of the author.
-        df_researcher_citation_metrics (pd.DataFrame): DataFrame loaded from 'researcher_citation_metrics.csv'.
+        author_id (int): The author_id of the author.
+        df_author_citation_metrics (pd.DataFrame): DataFrame loaded from 'author_citation_metrics.csv'.
 
     Returns:
         float or str: The citation acceleration score, np.inf for infinite acceleration,
                       or a string message if calculation is not possible.
     """
-    author_row = df_researcher_citation_metrics[df_researcher_citation_metrics['researcher_id'] == researcher_id]
+    author_row = df_author_citation_metrics[df_author_citation_metrics['author_id'] == author_id]
     if author_row.empty:
-        return "Author not found in researcher citation metrics."
+        return "Author not found in author citation metrics."
 
-    citations_by_year_str = author_row['citations_by_year'].iloc[0]
+    citations_by_year_str = author_row['citations_by_year'].values[0]
 
     # Parse the string representation of dictionary into an actual dictionary
-    # Handle potential issues with single quotes vs double quotes if needed, though json.loads is usually strict.
+    # Use ast.literal_eval for safer parsing of Python dictionary strings
     try:
-        # Replace single quotes with double quotes for valid JSON, if necessary
-        citations_by_year_dict = json.loads(citations_by_year_str.replace("'", "\""))
-    except json.JSONDecodeError:
-        print(f"Error parsing citations_by_year for researcher_id {researcher_id}: {citations_by_year_str}")
+        citations_by_year_dict = ast.literal_eval(citations_by_year_str)
+    except (ValueError, SyntaxError) as e:
+        print(f"Error parsing citations_by_year for author_id {author_id}: {citations_by_year_str}")
+        print(f"Parse error: {e}")
         return "Error parsing citation data."
 
     # Convert keys from string to int (years) and ensure values are integers
@@ -152,23 +166,83 @@ def citation_accel(researcher_id, df_researcher_citation_metrics):
     
     return float(citations_last_2yr) / citations_previous_2yr
 
+def first_author_dominance(author_id: int, df_author_citation_metrics: pd.DataFrame, df_authorships: pd.DataFrame, df_paper_info: pd.DataFrame) -> float | None:
+    """
+    Calculates the first author dominance for a given author.
+
+    First author dominance is defined as the cumulative citation count from papers
+    where the author is flagged as the first author, divided by the author's
+    total citation count (db_citation_count).
+
+    Args:
+        author_id (int): The author_id of the author.
+        df_author_citation_metrics (pd.DataFrame): DataFrame loaded from 'author_citation_metrics.csv'.
+        df_authorships (pd.DataFrame): DataFrame loaded from 'authorships.csv'.
+        df_paper_info (pd.DataFrame): DataFrame loaded from 'paper_info.csv'.
+
+    Returns:
+        float or None: The first author dominance score, or None if calculation is not possible.
+    """
+    # 1. Get the author's total citation count from author_citation_metrics.csv
+    total_citation_data = df_author_citation_metrics[df_author_citation_metrics['author_id'] == author_id]
+    if total_citation_data.empty:
+        print(f"No citation data found for author_id: {author_id} in author_citation_metrics.csv")
+        return None
+    total_citation_count = total_citation_data['db_citation_count'].values[0]
+
+    if total_citation_count == 0:
+        return 0.0 # If total citations are 0, dominance is 0
+
+    # 2. Get papers where the author is the first author from authorships.csv
+    first_author_papers = df_authorships[
+        (df_authorships['author_id'] == author_id) & (df_authorships['is_first_author'] == True)
+    ]
+
+    if first_author_papers.empty:
+        return 0.0 # If no papers where they are first author, dominance is 0
+
+    # 3. Get citation counts for these papers from paper_info.csv
+    # Merge first_author_papers with paper_info to get citation counts
+    # Use 'paper_id' from authorships and 's2_id' from paper_info for merging
+    merged_first_author_paper_info = pd.merge(
+        first_author_papers,
+        df_paper_info[['s2_id', 'citation_count']],
+        left_on='paper_id',
+        right_on='s2_id',
+        how='inner'
+    )
+
+    if merged_first_author_paper_info.empty:
+        print(f"No matching paper info found for first-authored papers by author_id: {author_id}")
+        return 0.0 # No citation data for first-authored papers found
+
+    cumulative_first_author_citations = merged_first_author_paper_info['citation_count'].sum()
+
+    # 4. Calculate first author dominance
+    dominance_score = float(cumulative_first_author_citations) / total_citation_count
+
+    return dominance_score
 
 if __name__ == "__main__":
     
     # Load dataframes (assuming the files are in the same directory as the script)
-    researcher_citation_metrics_df = pd.read_csv('./data/researcher_citation_metrics.csv')
+    author_citation_metrics_df = pd.read_csv('./data/author_citation_metrics.csv')
     authorships_df = pd.read_csv('./data/authorships.csv')
     paper_info_df = pd.read_csv('./data/paper_info.csv')
-
+    author_profiles_df = pd.read_csv('./data/author_profiles.csv')
 
     # Example Usage for citation_accel
-    author_id_accel = 100516590 # Use the same or a different researcher_id
-    accel_score = citation_accel(author_id_accel, researcher_citation_metrics_df)
-    
-    # Get the author's full name for Citation Acceleration
-    author_name_row_accel = researcher_citation_metrics_df[researcher_citation_metrics_df['researcher_id'] == author_id_accel]
-    author_full_name_accel = author_name_row_accel['researcher_name'].iloc[0] if not author_name_row_accel.empty else "Unknown Author"
+    author_id = 100466830 # Use the same or a different author_id
+    aci_score, citation_count, first_publication_year = adjusted_citation_impact(author_id, author_citation_metrics_df, authorships_df, paper_info_df)
+    accel_score = citation_accel(author_id, author_citation_metrics_df)
+    first_author_dom_score = first_author_dominance(author_id, author_citation_metrics_df, authorships_df, paper_info_df)
 
+    print(f"\n--- Adjusted Citation Impact ---")
+    print(f"Adjusted Citation Impact Score for ID {author_id}: {aci_score}")
+    print(f"Total Citation Count for ID {author_id}: {citation_count}")
+    print(f"First Publication Year for ID {author_id}: {first_publication_year}")
     print(f"\n--- Citation Acceleration ---")
-    print(f"Citation Acceleration for {author_full_name_accel} (ID {author_id_accel}): {accel_score}")
+    print(f"Citation Acceleration for ID {author_id}: {accel_score}")
+    print(f"\n--- First Author Dominance ---")
+    print(f"First Author Dominance for ID {author_id}: {first_author_dom_score}")
     print("-" * 30)
