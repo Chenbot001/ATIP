@@ -55,6 +55,7 @@ def calculate_h_index(citation_counts):
 # Initialize a dictionary to hold the final results before converting to DataFrame
 author_citation_dicts = {}
 author_h_indices = {}
+author_total_citations = {}
 
 for row in yearly_citations_agg.itertuples(index=False):
     researcher_id = row.researcher_id # 
@@ -65,12 +66,15 @@ for row in yearly_citations_agg.itertuples(index=False):
         author_citation_dicts[researcher_id] = {}
     author_citation_dicts[researcher_id][citing_year] = citation_count
 
-# Calculate h-index for each researcher
+# Calculate h-index and total citations for each researcher
 for researcher_id in author_citation_dicts.keys():
     # Get all papers and their citation counts for this researcher
     researcher_papers = paper_citations[paper_citations['researcher_id'] == researcher_id]
     citation_counts = researcher_papers['paper_citation_count'].tolist()
     author_h_indices[researcher_id] = calculate_h_index(citation_counts)
+    
+    # Calculate total citations for this researcher
+    author_total_citations[researcher_id] = sum(citation_counts)
 
 # Get unique researcher_ids and their names
 # It's best to get the researcher name from researcher_profiles.csv as it's the dedicated researcher info file.
@@ -82,11 +86,13 @@ final_data = []
 for researcher_id, name_row in unique_researchers.set_index('researcher_id').iterrows():
     researcher_name = name_row['researcher_name']
     citations_by_year_dict = author_citation_dicts.get(researcher_id, {}) # Get the dict or an empty dict if no citations
+    total_citations = author_total_citations.get(researcher_id, 0) # Get total citations or 0 if no citations
     h_index = author_h_indices.get(researcher_id, 0) # Get h-index or 0 if no citations
 
     final_data.append({
         'researcher_id': researcher_id,
         'researcher_name': researcher_name,
+        'db_citation_count': total_citations,
         'citations_by_year': citations_by_year_dict,
         'atip_h_index': h_index
     })
