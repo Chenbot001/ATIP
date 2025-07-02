@@ -2,9 +2,9 @@
 ACL Anthology Researcher-Paper Mapping Extractor
 
 This script extracts detailed researcher-paper relationships from the ACL Anthology.
-For each author in each paper, it records the author's information along with the paper's DOI,
-creating a comprehensive mapping that can be used for matching with external databases
-like Semantic Scholar.
+For each author in each paper, it records the author's information along with the paper's ACL ID,
+DOI, and title, creating a comprehensive mapping that can be used for matching with external 
+databases like Semantic Scholar.
 
 The script preserves all author-paper relationships without deduplication, meaning
 the same author will appear multiple times if they have multiple papers.
@@ -68,33 +68,39 @@ def generate_unique_researcher_id(first_name, last_name):
     return researcher_id
 
 
-def extract_paper_doi(paper):
+def extract_paper_info(paper):
     """
-    Extract DOI from a paper object.
+    Extract paper information including ACL ID, DOI, and title from a paper object.
     
     Args:
         paper: Paper object from ACL Anthology
         
     Returns:
-        str: DOI of the paper, or None if not available
+        tuple: (acl_id, paper_doi, paper_title) or (None, None, None) if not available
     """
     try:
-        # Try to get DOI from paper object
-        if hasattr(paper, 'doi') and paper.doi:
-            return paper.doi
-        
-        # Alternative: try to get from paper ID if DOI is not directly available
+        # Extract ACL ID (like 2024.acl-long.123)
+        acl_id = None
         if hasattr(paper, 'full_id') and paper.full_id:
-            return paper.full_id
+            acl_id = paper.full_id
+        elif hasattr(paper, 'id') and paper.id:
+            acl_id = paper.id
         
-        # Fallback: use paper ID
-        if hasattr(paper, 'id') and paper.id:
-            return paper.id
-            
-        return None
+        # Extract DOI
+        paper_doi = None
+        if hasattr(paper, 'doi') and paper.doi:
+            paper_doi = paper.doi
+        
+        # Extract paper title
+        paper_title = None
+        if hasattr(paper, 'title') and paper.title:
+            paper_title = str(paper.title).strip()
+        
+        return acl_id, paper_doi, paper_title
+        
     except Exception as e:
-        print(f"Error extracting DOI from paper: {str(e)}")
-        return None
+        print(f"Error extracting paper info: {str(e)}")
+        return None, None, None
 
 
 def process_paper_authors(paper):
@@ -108,9 +114,9 @@ def process_paper_authors(paper):
         list: List of dictionaries containing author-paper relationships
     """
     try:
-        paper_doi = extract_paper_doi(paper)
-        if not paper_doi:
-            print(f"Warning: No DOI found for paper {paper}")
+        acl_id, paper_doi, paper_title = extract_paper_info(paper)
+        if not acl_id:
+            print(f"Warning: No ACL ID found for paper {paper}")
             return []
         
         author_paper_data = []
@@ -136,14 +142,16 @@ def process_paper_authors(paper):
                     'researcher_id': researcher_id,
                     'first_name': first_name,
                     'last_name': last_name,
+                    'acl_id': acl_id,
                     'paper_doi': paper_doi,
+                    'paper_title': paper_title,
                     'affiliation': affiliation
                 }
                 
                 author_paper_data.append(author_record)
                 
             except Exception as e:
-                print(f"Error processing author {author.name} in paper {paper_doi}: {str(e)}")
+                print(f"Error processing author {author.name} in paper {acl_id}: {str(e)}")
                 continue
         
         return author_paper_data
@@ -275,8 +283,6 @@ def main():
                         help='Output CSV file path (default: data/researchers_data_with_paper.csv)')
     parser.add_argument('--collections-file', type=str, default="data/acl_collections.txt",
                         help='File containing multiple collection IDs')
-    parser.add_argument('--all-collections', action='store_true',
-                        help='Process all collections in collections-file')
     args = parser.parse_args()
     
     # Start timing
@@ -298,26 +304,18 @@ def main():
                 print(f"Cannot initialize anthology: {e2}")
                 sys.exit(1)
         
-        # Determine which collections to process
-        if args.all_collections:
-            # Read collection IDs from file
-            try:
-                with open(args.collections_file, 'r') as f:
-                    collection_ids = [line.strip() for line in f if line.strip()]
-                print(f"Read {len(collection_ids)} collections from {args.collections_file}")
-            except Exception as e:
-                print(f"Error reading collections file: {str(e)}")
-                sys.exit(1)
-                
-            # Process all collections
-            result_df = process_collections(anthology, collection_ids, args.output)
-        else:
-            # Process single collection
-            print(f"Processing single collection: {args.collection}")
-            result_df = search_collection(anthology, args.collection)
-            
-            # Save results
-            save_data_to_csv(result_df, args.output)
+        # Process all collections from the collections file by default
+        try:
+            with open(args.collections_file, 'r') as f:
+                collection_ids = [line.strip() for line in f if line.strip()]
+            print(f"Read {len(collection_ids)} collections from {args.collections_file}")
+        except Exception as e:
+            print(f"Error reading collections file: {str(e)}")
+            print(f"Falling back to single collection: {args.collection}")
+            collection_ids = [args.collection]
+        
+        # Process all collections
+        result_df = process_collections(anthology, collection_ids, args.output)
         
         # Print final statistics
         print(f"\n=== Final Statistics ===")
@@ -329,7 +327,7 @@ def main():
             print(f"Unique researchers: {unique_researchers}")
             
             # Count unique papers
-            unique_papers = result_df['paper_doi'].nunique()
+            unique_papers = result_df['acl_id'].nunique()
             print(f"Unique papers: {unique_papers}")
             
             # Show sample of data
