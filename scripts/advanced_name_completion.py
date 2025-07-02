@@ -443,10 +443,10 @@ def main():
     print("=" * 50)
     
     # File paths
-    acl_file = "data/researchers_data_with_paper.csv"
-    authorships_file = "data/authorships.csv"
-    profiles_file = "data/researcher_profiles.csv"
-    output_file = "data/researchers_profiles_cleaned2.csv"
+    acl_file = "./data/researchers_data_with_paper.csv"
+    authorships_file = "./data/authorships.csv"
+    profiles_file = "./data/researcher_profiles.csv"
+    output_file = "./data/researchers_profiles_cleaned2.csv"
     
     # Check if all input files exist
     for file_path in [acl_file, authorships_file, profiles_file]:

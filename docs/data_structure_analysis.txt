@@ -1,7 +1,18 @@
 CSV FILES STRUCTURE ANALYSIS
 ==================================================
 
-1. FILE: ACL25_ThemeData.csv
+1. FILE: ACL25 Accepted Paper with Track Info.csv
+   Size: 0.4 MB
+   Total Rows: 3,328
+   Columns (4):
+      1. Accepted To
+      2. Paper ID
+      3. Track Theme
+      4. Title
+
+--------------------------------------------------
+
+2. FILE: ACL25_ThemeData.csv
    Size: 2.94 MB
    Total Rows: 3,096
    Columns (5):
@@ -50,16 +61,30 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-6. FILE: paper_awards.csv
-   Size: 0.01 MB
-   Total Rows: 256
-   Columns (2):
-      1. paper_id
-      2. award
+6. FILE: h_index_comparison.csv
+   Size: 1.94 MB
+   Total Rows: 56,290
+   Columns (6):
+      1. researcher_id
+      2. researcher_name
+      3. profile_h_index
+      4. atip_h_index
+      5. match
+      6. difference
 
 --------------------------------------------------
 
-7. FILE: paper_info_with_citations.csv
+7. FILE: paper_awards.csv
+   Size: 0.01 MB
+   Total Rows: 251
+   Columns (3):
+      1. paper_id
+      2. award
+      3. venue
+
+--------------------------------------------------
+
+8. FILE: paper_info.csv
    Size: 28.99 MB
    Total Rows: 28,102
    Columns (10):
@@ -76,7 +101,18 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-8. FILE: researcher_profiles.csv
+9. FILE: researcher_citation_metrics.csv
+   Size: 2.33 MB
+   Total Rows: 56,290
+   Columns (4):
+      1. researcher_id
+      2. researcher_name
+      3. citations_by_year
+      4. atip_h_index
+
+--------------------------------------------------
+
+10. FILE: researcher_profiles.csv
    Size: 1.9 MB
    Total Rows: 56,290
    Columns (7):
@@ -87,16 +123,6 @@ CSV FILES STRUCTURE ANALYSIS
       5. total_citations
       6. latest_affiliation
       7. homepage
-
---------------------------------------------------
-
-9. FILE: researcher_yearly_citations.csv
-   Size: 2.22 MB
-   Total Rows: 56,290
-   Columns (3):
-      1. researcher_id
-      2. researcher_name
-      3. citations_by_year
 
 --------------------------------------------------
 

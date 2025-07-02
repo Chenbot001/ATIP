@@ -14,7 +14,7 @@ def batch_request(api_key, id_list):
     """
     r = requests.post(
         'https://api.semanticscholar.org/graph/v1/paper/batch',
-        params={'fields': 'paperId,citations.corpusId,citations.title,references.corpusId,references.title'},
+        params={'fields': 'paperId,corpusId,venue'},
         headers={'x-api-key': api_key},
         json={"ids": id_list}
     )
@@ -37,26 +37,52 @@ def search_by_title(api_key, title):
         params={
             'query': title,
             'limit': 1,
-            'fields': 'paperId,references.corpusId'
+            'fields': 'paperId,corpusId'
         }
     )
     
     response = r.json()
     return response
 
+def get_author_name(api_key, author_id):
+    """
+    Get the full name of a researcher using their Semantic Scholar author ID
+    
+    Args:
+        api_key (str): Semantic Scholar API key
+        author_id (str): Semantic Scholar author ID
+    
+    Returns:
+        str: Full name of the researcher if found, None otherwise
+    """
+    r = requests.get(
+        f'https://api.semanticscholar.org/graph/v1/author/{author_id}',
+        headers={'x-api-key': api_key},
+        params={
+            'fields': 'name,affiliations'
+        }
+    )
+    
+    if r.status_code == 200:
+        response = r.json()
+        return response
+    else:
+        print(f"Error: {r.status_code} - {r.text}")
+        return None
 
 if __name__ == "__main__":
     # Add your Semantic Scholar API key here
     API_KEY = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w"  # Replace with your actual API key
-    id_list = ["e7d4fd44400391888226b3f5d8acac0ab2106bac", "894009cd79adab9d32132ea7ea79c8c028d68d3b"]
+    id_list = ["ACL:D13-1170", "ACL:D12-1048"]
+    test_author_id = "103538973"  # Replace with a real Semantic Scholar author ID
     # title = "KLMo: Knowledge Graph Enhanced Pretrained Language Model with Fine-Grained Relationships"
     
-    papers_data = batch_request(API_KEY, id_list)
-    # print(response)
-    # response = search_by_title(API_KEY, title)
+    # response = batch_request(API_KEY, id_list)
     # print(json.dumps(response, indent=2, ensure_ascii=False))
-    for paper in papers_data:
-        print(paper['paperId'])
+
+    
+    author_name = get_author_name(API_KEY, test_author_id)
+    print(json.dumps(author_name, indent=2, ensure_ascii=False))
 
 
 

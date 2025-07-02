@@ -45,7 +45,7 @@ def extract_paper_awards(anthology, collection_id=""):
         collection_id (str, optional): ID of the collection to search.
         
     Returns:
-        pd.DataFrame: A DataFrame containing paper_id and award mapping.
+        pd.DataFrame: A DataFrame containing paper_id, award, and venue mapping.
     """
     try:
         # Get the collection
@@ -61,6 +61,14 @@ def extract_paper_awards(anthology, collection_id=""):
                 paper_counter += 1
                 paper_id = paper.full_id
                 
+                # Extract venue information
+                venue = ""
+                if hasattr(paper, 'venue_ids') and paper.venue_ids:
+                    try:
+                        venue = anthology.venues[paper.venue_ids[0]].acronym
+                    except (KeyError, AttributeError):
+                        venue = ""
+                
                 # 根据文档使用paper.awards属性（注意是复数形式）获取获奖信息，它是一个列表
                 if hasattr(paper, 'awards') and paper.awards:
                     volume_with_awards = True
@@ -68,10 +76,11 @@ def extract_paper_awards(anthology, collection_id=""):
                     for award in paper.awards:
                         awards_data.append({
                             'paper_id': paper_id,
-                            'award': award
+                            'award': award,
+                            'venue': venue
                         })
                         # 打印找到的奖项信息，用于调试
-                        print(f"Found award for paper {paper_id}: {award}")
+                        print(f"Found award for paper {paper_id} ({venue}): {award}")
         
         if volume_with_awards:
             print(f"Found awards in collection: {collection_id}")
@@ -100,7 +109,7 @@ def main():
         print(f"Error initializing anthology: {e}")
         try:
             # 如果本地仓库不可用，尝试从在线API初始化
-            anthology = Anthology()
+            anthology = Anthology.from_url()
             print("Using online anthology API.")
         except Exception as e:
             print(f"Error initializing online anthology: {e}")
