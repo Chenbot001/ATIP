@@ -166,32 +166,38 @@ def citation_accel(author_id: int, df_author_citation_metrics: pd.DataFrame):
     
     return float(citations_last_2yr) / citations_previous_2yr
 
-def first_author_dominance(author_id: int, df_author_citation_metrics: pd.DataFrame, df_authorships: pd.DataFrame, df_paper_info: pd.DataFrame) -> float | None:
+def first_author_dominance(author_id: int, df_author_profiles: pd.DataFrame, df_authorships: pd.DataFrame, df_paper_info: pd.DataFrame) -> float | None:
     """
-    Calculates the first author dominance for a given author.
+    Calculates the first author dominance for a given author based on the revised metrics.
 
     First author dominance is defined as the cumulative citation count from papers
-    where the author is flagged as the first author, divided by the author's
-    total citation count (db_citation_count).
+    where the author is flagged as the first author (derived from paper_info.csv's citation_count),
+    divided by the author's total_citations from author_profiles.csv.
 
     Args:
         author_id (int): The author_id of the author.
-        df_author_citation_metrics (pd.DataFrame): DataFrame loaded from 'author_citation_metrics.csv'.
+        df_author_profiles (pd.DataFrame): DataFrame loaded from 'author_profiles.csv'.
         df_authorships (pd.DataFrame): DataFrame loaded from 'authorships.csv'.
         df_paper_info (pd.DataFrame): DataFrame loaded from 'paper_info.csv'.
 
     Returns:
         float or None: The first author dominance score, or None if calculation is not possible.
     """
-    # 1. Get the author's total citation count from author_citation_metrics.csv
-    total_citation_data = df_author_citation_metrics[df_author_citation_metrics['author_id'] == author_id]
+    # 1. Get the author's total citation count from author_profiles.csv
+    total_citation_data = df_author_profiles[df_author_profiles['author_id'] == author_id]
     if total_citation_data.empty:
-        print(f"No citation data found for author_id: {author_id} in author_citation_metrics.csv")
+        print(f"No profile data found for author_id: {author_id} in author_profiles.csv")
         return None
-    total_citation_count = total_citation_data['db_citation_count'].values[0]
+    
+    # Ensure 'total_citations' column exists and is not empty
+    if 'total_citations' not in total_citation_data.columns:
+        print(f"Column 'total_citations' not found in author_profiles.csv. Please check data structure.")
+        return None
+
+    total_citation_count = total_citation_data['total_citations'].item()
 
     if total_citation_count == 0:
-        return 0.0 # If total citations are 0, dominance is 0
+        return 0.0 # If total citations are 0, dominance is 0 (cannot divide by zero)
 
     # 2. Get papers where the author is the first author from authorships.csv
     first_author_papers = df_authorships[
@@ -201,12 +207,10 @@ def first_author_dominance(author_id: int, df_author_citation_metrics: pd.DataFr
     if first_author_papers.empty:
         return 0.0 # If no papers where they are first author, dominance is 0
 
-    # 3. Get citation counts for these papers from paper_info.csv
-    # Merge first_author_papers with paper_info to get citation counts
-    # Use 'paper_id' from authorships and 's2_id' from paper_info for merging
+    # 3. Get cumulative citation counts for these first-authored papers from paper_info.csv
     merged_first_author_paper_info = pd.merge(
         first_author_papers,
-        df_paper_info[['s2_id', 'citation_count']],
+        df_paper_info[['s2_id', 'citation_count']], # Use 'citation_count' from paper_info 
         left_on='paper_id',
         right_on='s2_id',
         how='inner'
@@ -232,10 +236,10 @@ if __name__ == "__main__":
     author_profiles_df = pd.read_csv('./data/author_profiles.csv')
 
     # Example Usage for citation_accel
-    author_id = 100466830 # Use the same or a different author_id
+    author_id = 37202877 # Use the same or a different author_id
     aci_score, citation_count, first_publication_year = adjusted_citation_impact(author_id, author_citation_metrics_df, authorships_df, paper_info_df)
     accel_score = citation_accel(author_id, author_citation_metrics_df)
-    first_author_dom_score = first_author_dominance(author_id, author_citation_metrics_df, authorships_df, paper_info_df)
+    fad_score = first_author_dominance(author_id, author_profiles_df, authorships_df, paper_info_df)
 
     print(f"\n--- Adjusted Citation Impact ---")
     print(f"Adjusted Citation Impact Score for ID {author_id}: {aci_score}")
@@ -244,5 +248,5 @@ if __name__ == "__main__":
     print(f"\n--- Citation Acceleration ---")
     print(f"Citation Acceleration for ID {author_id}: {accel_score}")
     print(f"\n--- First Author Dominance ---")
-    print(f"First Author Dominance for ID {author_id}: {first_author_dom_score}")
+    print(f"First Author Dominance for ID {author_id}: {fad_score}")
     print("-" * 30)
