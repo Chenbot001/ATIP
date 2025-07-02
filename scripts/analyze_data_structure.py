@@ -23,6 +23,7 @@ def analyze_csv_structure(csv_file_path):
         'file_name': os.path.basename(csv_file_path),
         'file_size_mb': round(os.path.getsize(csv_file_path) / (1024 * 1024), 2),
         'columns': [],
+        'column_types': {},
         'total_rows': 0
     }
     
@@ -36,6 +37,42 @@ def analyze_csv_structure(csv_file_path):
             # Count total rows (excluding header)
             row_count = sum(1 for row in reader)
             file_info['total_rows'] = row_count
+        
+        # For paper_id columns, check the content type
+        if 'paper_id' in header:
+            paper_id_col_idx = header.index('paper_id')
+            
+            # Read a sample of rows to determine the type
+            sample_size = min(100, file_info['total_rows'])  # Check up to 100 rows
+            sample_rows = []
+            
+            with open(csv_file_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header
+                
+                for i, row in enumerate(reader):
+                    if i >= sample_size:
+                        break
+                    if len(row) > paper_id_col_idx:
+                        sample_rows.append(row[paper_id_col_idx])
+            
+            # Determine if paper_id contains strings or integers
+            string_count = 0
+            int_count = 0
+            
+            for value in sample_rows:
+                if value.strip():  # Skip empty values
+                    try:
+                        int(value)
+                        int_count += 1
+                    except ValueError:
+                        string_count += 1
+            
+            # Determine the type based on majority
+            if string_count > int_count:
+                file_info['column_types']['paper_id'] = 's2_id'
+            else:
+                file_info['column_types']['paper_id'] = 'corpus_id'
             
     except Exception as e:
         file_info['error'] = str(e)
@@ -82,7 +119,12 @@ def main():
             f.write(f"   Columns ({len(result['columns'])}):\n")
             
             for j, col in enumerate(result['columns'], 1):
-                f.write(f"     {j:2d}. {col}\n")
+                # Add type annotation for paper_id columns
+                if col == 'paper_id' and 'column_types' in result and 'paper_id' in result['column_types']:
+                    type_suffix = f" ({result['column_types']['paper_id']})"
+                    f.write(f"     {j:2d}. {col}{type_suffix}\n")
+                else:
+                    f.write(f"     {j:2d}. {col}\n")
             
             if 'error' in result:
                 f.write(f"   ERROR: {result['error']}\n")

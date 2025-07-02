@@ -1,7 +1,18 @@
 CSV FILES STRUCTURE ANALYSIS
 ==================================================
 
-1. FILE: ACL25_ThemeData.csv
+1. FILE: ACL25 Accepted Paper with Track Info.csv
+   Size: 0.4 MB
+   Total Rows: 3,328
+   Columns (4):
+      1. Accepted To
+      2. Paper ID
+      3. Track Theme
+      4. Title
+
+--------------------------------------------------
+
+2. FILE: ACL25_ThemeData.csv
    Size: 2.94 MB
    Total Rows: 3,096
    Columns (5):
@@ -13,12 +24,12 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-2. FILE: authorships.csv
+3. FILE: authorships.csv
    Size: 19.64 MB
    Total Rows: 133,468
    Columns (6):
       1. researcher_id
-      2. paper_id
+      2. paper_id (s2_id)
       3. author_name
       4. is_first_author
       5. is_last_author
@@ -26,7 +37,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-3. FILE: citation_edges.csv
+4. FILE: citation_edges.csv
    Size: 90.21 MB
    Total Rows: 987,571
    Columns (6):
@@ -43,7 +54,7 @@ CSV FILES STRUCTURE ANALYSIS
    Size: 4.53 MB
    Total Rows: 133,468
    Columns (4):
-      1. paper_id
+      1. paper_id (corpus_id)
       2. researcher_id
       3. author_name
       4. authorship_order
@@ -67,7 +78,7 @@ CSV FILES STRUCTURE ANALYSIS
    Size: 0.01 MB
    Total Rows: 251
    Columns (3):
-      1. paper_id
+      1. paper_id (corpus_id)
       2. award
       3. venue
 
@@ -103,7 +114,7 @@ CSV FILES STRUCTURE ANALYSIS
 --------------------------------------------------
 
 10. FILE: researcher_profiles.csv
-   Size: 1.9 MB
+   Size: 1.92 MB
    Total Rows: 56,290
    Columns (7):
       1. researcher_id
