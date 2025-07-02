@@ -1,4 +1,4 @@
-researcher_id,researcher_name,db_citation_count,citations_by_year,atip_h_index
+author_id,author_name,db_citation_count,citations_by_year,atip_h_index
 10000157,Cuong Xuan Chu,0,{},0
 10007273,Qiaolin Xia,23,"{2019: 13, 2020: 4, 2021: 1, 2022: 3, 2023: 1, 2024: 1}",3
 10017193,Aiwei Liu,32,"{2023: 8, 2024: 21, 2025: 3}",4

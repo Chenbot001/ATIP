@@ -1,4 +1,4 @@
-researcher_id,researcher_name,profile_h_index,atip_h_index,match,difference
+author_id,author_name,profile_h_index,atip_h_index,match,difference
 10000157,C. Chu,4,0,False,4
 10007273,Qiaolin Xia,9,3,False,6
 10017193,Aiwei Liu,16,4,False,12

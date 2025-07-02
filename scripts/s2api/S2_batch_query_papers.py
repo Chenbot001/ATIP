@@ -47,7 +47,7 @@ def fetch_relational_data(input_csv_path: str, output_dir: str) -> None:
     # Write headers for output files
     with open(authorships_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['researcher_id', 'paper_id', 'author_name', 'is_first_author', 'is_last_author','paper_title'])
+        writer.writerow(['author_id', 'paper_id', 'author_name', 'is_first_author', 'is_last_author','paper_title'])
     
     with open(citations_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)

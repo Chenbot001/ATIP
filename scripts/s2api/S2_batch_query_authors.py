@@ -9,7 +9,7 @@ from typing import List, Set, Dict, Any
 # API Configuration
 S2_API_KEY = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w"  # Replace with your actual API key
 
-def fetch_researcher_profiles(output_dir: str) -> None:
+def fetch_author_profiles(output_dir: str) -> None:
     """
     Phase 2: Fetch researcher profile data from Semantic Scholar API.
     
@@ -39,7 +39,7 @@ def fetch_researcher_profiles(output_dir: str) -> None:
     # Write header
     with open(profiles_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['researcher_id', 'first_name', 'last_name', 'h_index', 'total_citations', 'latest_affiliation', 'homepage'])   
+        writer.writerow(['author_id', 'first_name', 'last_name', 'h_index', 'total_citations', 'latest_affiliation', 'homepage'])   
     
     # Process each minibatch
     headers = {'x-api-key': S2_API_KEY} if S2_API_KEY != "YOUR_KEY_HERE" else {}
@@ -119,8 +119,8 @@ def main():
     """
     output_dir = "./data"
     # Phase 2: Fetch researcher profiles
-    print("=== Phase 2: Fetching Researcher Profiles ===")
-    fetch_researcher_profiles(output_dir)
+    print("=== Phase 2: Fetching Author Profiles ===")
+    fetch_author_profiles(output_dir)
     print()
     
     print("Data gathering process complete!")
