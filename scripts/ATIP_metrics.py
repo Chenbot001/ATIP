@@ -160,19 +160,6 @@ if __name__ == "__main__":
     authorships_df = pd.read_csv('./data/authorships.csv')
     paper_info_df = pd.read_csv('./data/paper_info.csv')
 
-    # Example Usage for adjusted_citation_impact
-    author_id_aci = 100516590 # Replace with an actual researcher_id from your data
-    aci, total_citations, first_pub_year = adjusted_citation_impact(author_id_aci, researcher_citation_metrics_df, authorships_df, paper_info_df)
-    
-    # Get the author's full name for ACI
-    author_name_row_aci = researcher_citation_metrics_df[researcher_citation_metrics_df['researcher_id'] == author_id_aci]
-    author_full_name_aci = author_name_row_aci['researcher_name'].iloc[0] if not author_name_row_aci.empty else "Unknown Author"
-
-    print(f"--- Adjusted Citation Impact ---")
-    print(f"Adjusted Citation Impact for {author_full_name_aci} (ID {author_id_aci}): {aci}")
-    print(f"Total Citation Count: {total_citations}")
-    print(f"Year of Earliest Publication: {first_pub_year}")
-    print("-" * 30)
 
     # Example Usage for citation_accel
     author_id_accel = 100516590 # Use the same or a different researcher_id
