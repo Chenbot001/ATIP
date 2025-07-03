@@ -154,6 +154,7 @@ def complete_researcher_names():
     title_matches = 0
     no_papers_count = 0
     no_matches_count = 0
+    processed_count = 0
     
     completed_examples = []
     
@@ -161,6 +162,12 @@ def complete_researcher_names():
     result_df = researchers_df.copy()
     
     for idx, researcher in incomplete_researchers.iterrows():
+        processed_count += 1
+        
+        # 每处理100个研究者显示一次进度
+        if processed_count % 100 == 0:
+            print(f"处理进度: {processed_count}/{total_incomplete} ({processed_count/total_incomplete:.1%})")
+            print(f"  当前已补全: {completed_count} 个研究者")
         researcher_id = researcher[id_field]  # 使用动态字段名
         incomplete_first = researcher['first_name']
         incomplete_last = researcher['last_name']
@@ -198,6 +205,14 @@ def complete_researcher_names():
                 matched_title = paper_title
                 title_matches += 1
                 
+                # 每隔50个补全或前10个补全时输出详细信息
+                if completed_count <= 10 or completed_count % 50 == 0:
+                    print(f"✓ 补全成功 #{completed_count}: ID={researcher_id}")
+                    print(f"   原姓名: {incomplete_first} {incomplete_last}")
+                    print(f"   补全后: {completed_name}")
+                    print(f"   匹配论文: {matched_title[:50]}{'...' if len(matched_title) > 50 else ''}")
+                    print()
+                
                 # 保存前几个示例
                 if len(completed_examples) < 10:
                     completed_examples.append({
@@ -211,6 +226,12 @@ def complete_researcher_names():
         
         if not found_match:
             no_matches_count += 1
+            # 偶尔显示无法匹配的情况（每1000个显示一次）
+            if processed_count % 1000 == 0 and no_matches_count > 0:
+                print(f"ⓘ 无法匹配示例: ID={researcher_id}, 姓名={incomplete_first} {incomplete_last}")
+    
+    print(f"处理完成: {processed_count}/{total_incomplete} ({100.0:.1%})")
+    print(f"最终补全数量: {completed_count}")
     
     # 输出统计结果
     print(f"\n=== 补全结果统计 ===")
