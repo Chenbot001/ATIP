@@ -38,7 +38,7 @@ CSV FILES STRUCTURE ANALYSIS
 --------------------------------------------------
 
 4. FILE: author_citation_metrics.csv
-   Size: 2.46 MB
+   Size: 2.47 MB
    Total Rows: 56,290
    Columns (5):
       1. author_id
@@ -49,7 +49,17 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-5. FILE: author_data.csv
+5. FILE: author_coauthor_hindex.csv
+   Size: 1.53 MB
+   Total Rows: 55,881
+   Columns (3):
+      1. author_id
+      2. author_name
+      3. coauthor_average_h_index
+
+--------------------------------------------------
+
+6. FILE: author_data.csv
    Size: 2.49 MB
    Total Rows: 46,810
    Columns (5):
@@ -61,7 +71,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-6. FILE: author_data_with_paper.csv
+7. FILE: author_data_with_paper.csv
    Size: 26.17 MB
    Total Rows: 151,487
    Columns (7):
@@ -75,7 +85,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-7. FILE: author_profiles.csv
+8. FILE: author_profiles.csv
    Size: 1.92 MB
    Total Rows: 56,290
    Columns (7):
@@ -89,7 +99,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-8. FILE: citation_edges.csv
+9. FILE: citation_edges.csv
    Size: 90.21 MB
    Total Rows: 987,571
    Columns (6):
@@ -102,8 +112,8 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-9. FILE: coauthors_by_paper.csv
-   Size: 4.53 MB
+10. FILE: coauthors_by_paper.csv
+   Size: 4.54 MB
    Total Rows: 133,468
    Columns (4):
       1. paper_id (corpus_id)
@@ -113,8 +123,8 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-10. FILE: h_index_comparison.csv
-   Size: 1.94 MB
+11. FILE: h_index_comparison.csv
+   Size: 1.96 MB
    Total Rows: 56,290
    Columns (6):
       1. author_id
@@ -126,7 +136,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-11. FILE: paper_awards.csv
+12. FILE: paper_awards.csv
    Size: 0.01 MB
    Total Rows: 251
    Columns (3):
@@ -136,7 +146,7 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-12. FILE: paper_info.csv
+13. FILE: paper_info.csv
    Size: 28.99 MB
    Total Rows: 28,102
    Columns (10):

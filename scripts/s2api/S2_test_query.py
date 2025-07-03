@@ -59,7 +59,7 @@ def get_author_name(api_key, author_id):
         f'https://api.semanticscholar.org/graph/v1/author/{author_id}',
         headers={'x-api-key': api_key},
         params={
-            'fields': 'name,affiliations'
+            'fields': 'name,affiliations,papers'
         }
     )
     
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # Add your Semantic Scholar API key here
     API_KEY = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w"  # Replace with your actual API key
     id_list = ["ACL:D13-1170", "ACL:D12-1048"]
-    test_author_id = "103538973"  # Replace with a real Semantic Scholar author ID
+    test_author_id = "1398834003"  # Replace with a real Semantic Scholar author ID
     # title = "KLMo: Knowledge Graph Enhanced Pretrained Language Model with Fine-Grained Relationships"
     
     # response = batch_request(API_KEY, id_list)
