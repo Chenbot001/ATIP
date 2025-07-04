@@ -194,7 +194,6 @@ def fetch_relational_data(input_csv_path: str, output_dir: str) -> None:
     print(f"Phase 1 complete. Found {len(unique_author_ids)} unique authors.")
     print(f"Output files saved to: {output_dir}")
 
-
 def main():
     """
     Main function to run both phases of the data gathering process.

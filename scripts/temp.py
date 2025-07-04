@@ -1,61 +1,84 @@
 import pandas as pd
 import os
 
-# --- Configuration ---
-AUTHORSHIPS_FILE = './data/authorships.csv'
-PAPER_INFO_FILE = './data/paper_info.csv'
-OUTPUT_FILE = './data/authorships_updated.csv'
-
-def update_paper_ids():
+def analyze_unique_keys():
     """
-    Reads authorships.csv and paper_info.csv to replace the paper ID
-    from s2_id to corpus_id.
+    Analyze paper_info.csv to check if corpus_id and s2_id are unique keys.
+    Print any duplicates found in a readable format.
     """
-    # 1. Verify that the necessary input files exist
-    if not all(os.path.exists(f) for f in [AUTHORSHIPS_FILE, PAPER_INFO_FILE]):
-        print(f"❌ Error: Make sure '{AUTHORSHIPS_FILE}' and '{PAPER_INFO_FILE}' are in the same directory.")
+    
+    # Path to the CSV file
+    csv_path = os.path.join('data', 'paper_info.csv')
+    
+    # Check if file exists
+    if not os.path.exists(csv_path):
+        print(f"Error: File not found at {csv_path}")
         return
-
-    print("▶️ Loading data files...")
-    authorships_df = pd.read_csv(AUTHORSHIPS_FILE)
-    # Only load the necessary columns from paper_info.csv 
-    paper_info_df = pd.read_csv(PAPER_INFO_FILE, usecols=['s2_id', 'corpus_id'])
-
-    print("🔄 Mapping s2_id to corpus_id...")
-    # For merging, rename the 'paper_id' column to match 's2_id' in paper_info
-    authorships_df.rename(columns={'paper_id': 's2_id'}, inplace=True)
-
-    # Perform a left merge. This keeps all records from authorships.csv
-    # and adds the matching corpus_id from paper_info.csv.
-    merged_df = pd.merge(authorships_df, paper_info_df, on='s2_id', how='left')
     
-    # Report if any IDs could not be mapped
-    unmapped_count = merged_df['corpus_id'].isnull().sum()
-    if unmapped_count > 0:
-        print(f"⚠️ Warning: {unmapped_count} records could not be mapped to a corpus_id.")
+    try:
+        # Read the CSV file
+        print("Loading paper_info.csv...")
+        df = pd.read_csv(csv_path)
+        
+        print(f"Total rows in dataset: {len(df)}")
+        print(f"Columns found: {list(df.columns)}")
+        print()
+        
+        # Check if required columns exist
+        required_columns = ['corpus_id', 's2_id', 'title']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            print(f"Error: Missing required columns: {missing_columns}")
+            return
 
-    print("📝 Restructuring the DataFrame...")
-    # Remove the old 's2_id' column
-    merged_df.drop(columns=['s2_id'], inplace=True)
-    # Rename 'corpus_id' to 'paper_id' as requested
-    merged_df.rename(columns={'corpus_id': 'paper_id'}, inplace=True)
+        # Analyze title uniqueness
+        print("=" * 60)
+        print("ANALYZING title UNIQUENESS")
+        print("=" * 60)
+        
+        title_counts = df['title'].value_counts()
+        title_duplicates = title_counts[title_counts > 1]
+        
+        if len(title_duplicates) == 0:
+            print("✓ title is unique - no duplicates found")
+        else:
+            print(f"✗ title has {len(title_duplicates)} duplicate values:")
+            print(f"  Total duplicate rows: {title_duplicates.sum()}")
+            print()
+            
+            for title, count in title_duplicates.items():
+                print(f"title: {title} (appears {count} times)")
+                duplicate_rows = df[df['title'] == title]
+                print("Duplicate rows:")
+                for idx, row in duplicate_rows.iterrows():
+                    print(f"  Row {idx}:")
+                    print(f"    corpus_id: {row['corpus_id']}")
+                    print(f"    s2_id: {row['s2_id']}")
+                    print(f"    acl_id: {row['acl_id']}")
+                    print(f"    DOI: {row['DOI']}")
+                    print(f"    title: {row['title']}")
+                    print(f"    venue: {row['venue']}")
+                    print(f"    year: {row['year']}")
+                print("-" * 40)
+        
+        print()
+        
+        # Summary
+        print("=" * 60)
+        print("SUMMARY")
+        print("=" * 60)
+        print(f"Total rows: {len(df)}")
+        print(f"Unique corpus_id values: {df['corpus_id'].nunique()}")
+        print(f"Unique s2_id values: {df['s2_id'].nunique()}")
+        print(f"Unique title values: {df['title'].nunique()}")
+        if len(corpus_id_duplicates) == 0 and len(s2_id_duplicates) == 0 and len(title_duplicates) == 0:
+            print("✓ All columns are unique keys")
+        else:
+            print("✗ Duplicates found - these columns are not unique keys")
+            
+    except Exception as e:
+        print(f"Error reading CSV file: {e}")
 
-    # Reorder columns to match the original file's structure
-    # Original columns are: author_id, paper_id (s2_id), author_name, is_first_author, is_last_author, paper_title 
-    final_columns = [
-        'author_id', 
-        'paper_id', 
-        'author_name', 
-        'is_first_author', 
-        'is_last_author', 
-        'paper_title'
-    ]
-    final_df = merged_df[final_columns]
-
-    print(f"💾 Saving updated data to '{OUTPUT_FILE}'...")
-    final_df.to_csv(OUTPUT_FILE, index=False)
-    
-    print(f"\n✅ Success! New file created: '{OUTPUT_FILE}'")
-
-if __name__ == '__main__':
-    update_paper_ids()
+if __name__ == "__main__":
+    analyze_unique_keys()

@@ -13,7 +13,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="acl_anthology.an
 CONFIG = {
     'data_dir': 'data',
     'paper_info_file': 'paper_info.csv',
-    'author_profiles_file': 'author_data.csv',
+    'author_profiles_file': 'author_profiles.csv',
     'authorships_file': 'authorships.csv'
 }
 
