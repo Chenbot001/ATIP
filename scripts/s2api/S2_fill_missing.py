@@ -5,70 +5,183 @@ import time
 import json
 from tqdm import tqdm
 
-def test_missing_values():
+
+def test_missing_values(filepath, required_columns):
     """
-    Test script to count rows with empty or None values in corpus_id, s2_id, or DOI columns
+    Test script to count rows with empty or None values in specified columns.
+
+    Args:
+        filepath (str): Path to the CSV file.
+        required_columns (list): A list of column names to check for missing values.
+
+    Returns:
+        tuple: A tuple containing the DataFrame and the boolean mask of empty rows, or (None, None) on error.
     """
     try:
-        # Load the paper_info.csv file
-        print("Loading paper_info_updated.csv...")
-        df = pd.read_csv('./data/paper_info_updated.csv')
+        # Load the specified CSV file
+        print(f"Loading {filepath}...")
+        df = pd.read_csv(filepath)
         
         print(f"Total rows in dataset: {len(df)}")
         print(f"Columns in dataset: {list(df.columns)}")
         
         # Check if the required columns exist
-        required_columns = ['corpus_id', 's2_id']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
             print(f"Warning: Missing columns: {missing_columns}")
             return None, None
         
-        # Count rows where any of the specified columns is empty or None
-        # Consider empty strings, None, NaN, and whitespace-only strings as empty
-        empty_mask = (
-            df['corpus_id'].isna() | 
-            (df['corpus_id'].astype(str).str.strip() == '') |
-            (df['corpus_id'].astype(str).str.strip() == 'nan') |
-            (df['corpus_id'] == 0) |
-            df['s2_id'].isna() | 
-            (df['s2_id'].astype(str).str.strip() == '') |
-            (df['s2_id'].astype(str).str.strip() == 'nan')
-        )
-        
-        rows_with_empty_values = empty_mask.sum()
+        # Create a combined mask for all required columns
+        final_empty_mask = pd.Series([False] * len(df), index=df.index)
+
+        for col in required_columns:
+            base_mask = (
+                df[col].isna() |
+                (df[col].astype(str).str.strip() == '') |
+                (df[col].astype(str).str.strip() == 'nan')
+            )
+            # Special case: 'corpus_id' value of 0 is also considered empty
+            if col == 'corpus_id':
+                base_mask |= (df[col] == 0)
+            
+            final_empty_mask |= base_mask
+
+        rows_with_empty_values = final_empty_mask.sum()
         
         print(f"\nResults:")
-        print(f"Rows with empty or None values in any of (corpus_id, s2_id, DOI): {rows_with_empty_values}")
+        print(f"Rows with empty or None values in any of {required_columns}: {rows_with_empty_values}")
         print(f"Percentage of rows with missing values: {(rows_with_empty_values / len(df)) * 100:.2f}%")
         
         # Show breakdown by column
         print(f"\nBreakdown by column:")
         for col in required_columns:
+            col_mask = (
+                df[col].isna() |
+                (df[col].astype(str).str.strip() == '') |
+                (df[col].astype(str).str.strip() == 'nan')
+            )
             if col == 'corpus_id':
-                col_empty = (
-                    df[col].isna() | 
-                    (df[col].astype(str).str.strip() == '') |
-                    (df[col].astype(str).str.strip() == 'nan') |
-                    (df[col] == 0)
-                ).sum()
-            else:
-                col_empty = (
-                    df[col].isna() | 
-                    (df[col].astype(str).str.strip() == '') |
-                    (df[col].astype(str).str.strip() == 'nan')
-                ).sum()
+                 col_mask |= (df[col] == 0)
+            
+            col_empty = col_mask.sum()
             print(f"  {col}: {col_empty} empty values ({col_empty/len(df)*100:.2f}%)")
         
-        return df, empty_mask
+        return df, final_empty_mask
         
     except FileNotFoundError:
-        print("Error: paper_info.csv not found in ./data/ directory")
+        print(f"Error: {filepath} not found.")
         return None, None
     except Exception as e:
         print(f"Error: {e}")
         return None, None
+
+
+def fix_dupes(df, api_key):
+    """
+    Identifies and handles duplicate s2_ids.
+    1. Removes rows where both s2_id and title are identical.
+    2. For remaining dupes (same s2_id, different title), corrects incorrect entries via API.
+    3. Reports any duplicate rows that were not updated during the process.
+    """
+    print("\nStarting duplicate check and correction process...")
+    dupe_mask = df.duplicated(subset=['s2_id'], keep=False) & df['s2_id'].notna()
+    # Ensure the mask is boolean
+    dupe_mask = dupe_mask.astype(bool)
+    s2_ids_to_check = df[dupe_mask]['s2_id'].unique()
+    
+    if len(s2_ids_to_check) == 0:
+        print("✅ No duplicate s2_ids found. Skipping correction.")
+        return df
+        
+    print(f"Found {len(s2_ids_to_check)} s2_ids with duplicate entries. Verifying...")
+    
+    # --- Take a snapshot of the initial state of all duplicate rows ---
+    initial_dupe_rows = df[dupe_mask].copy()
+    
+    df_corrected = df.copy()
+    api_corrected_count = 0
+    title_dupes_removed_count = 0
+
+    # Loop to attempt corrections
+    for s2_id in tqdm(s2_ids_to_check, desc="Fixing Duplicates"):
+        # --- 1. Handle rows with IDENTICAL TITLES first ---
+        dupe_group = df_corrected[df_corrected['s2_id'] == s2_id]
+        title_dupe_mask = dupe_group.duplicated(subset=['title'], keep='first')
+        indices_to_drop = dupe_group[title_dupe_mask].index
+
+        if not indices_to_drop.empty:
+            df_corrected.drop(indices_to_drop, inplace=True)
+            title_dupes_removed_count += len(indices_to_drop)
+        
+        # --- 2. For remaining dupes (same ID, different titles), verify with API ---
+        # Re-evaluate the group after potential removals
+        dupe_group_after_cleanup = df_corrected[df_corrected['s2_id'] == s2_id]
+        
+        # Only proceed to API check if there's still ambiguity (more than 1 row)
+        if len(dupe_group_after_cleanup) > 1:
+            for idx, row in dupe_group_after_cleanup.iterrows():
+                title = row.get('title')
+                if pd.isna(title) or not title.strip():
+                    continue
+
+                api_result = search_by_title(api_key, title)
+                time.sleep(1) 
+
+                if api_result and api_result.get('paperId'):
+                    correct_s2_id = api_result.get('paperId')
+                    
+                    if row['s2_id'] != correct_s2_id:
+                        df_corrected.at[idx, 's2_id'] = correct_s2_id
+                        df_corrected.at[idx, 'corpus_id'] = api_result.get('corpusId')
+                        
+                        if 'DOI' in df_corrected.columns and api_result.get('externalIds', {}).get('DOI'):
+                            df_corrected.at[idx, 'DOI'] = api_result['externalIds']['DOI']
+                        
+                        api_corrected_count += 1
+
+    print(f"\nDuplicate check complete!")
+    if title_dupes_removed_count > 0:
+        print(f"✅ Removed {title_dupes_removed_count} redundant entries with identical titles.")
+    if api_corrected_count > 0:
+        print(f"✅ Corrected {api_corrected_count} rows with incorrect ID assignments via API.")
+    if title_dupes_removed_count == 0 and api_corrected_count == 0:
+        print("No rows required correction or removal.")
+
+
+    # --- 3. Debugging: Compare final state to initial state for remaining dupes ---
+    un_updated_dupes = []
+    # Get the final state of the rows that were initially identified as duplicates
+    final_dupe_rows = df_corrected.loc[df_corrected.index.intersection(initial_dupe_rows.index)]
+
+    for idx, initial_row in initial_dupe_rows.iterrows():
+        # Check if the row still exists in the corrected dataframe
+        if idx in final_dupe_rows.index:
+            final_row = final_dupe_rows.loc[idx]
+            
+            s2_id_same = str(initial_row['s2_id']) == str(final_row['s2_id'])
+            corpus_id_same = str(initial_row['corpus_id']) == str(final_row['corpus_id'])
+            doi_same = str(initial_row.get('DOI')) == str(final_row.get('DOI'))
+
+            if s2_id_same and corpus_id_same and doi_same:
+                un_updated_dupes.append({
+                    'index': idx,
+                    's2_id': initial_row['s2_id'],
+                    'title': initial_row['title']
+                })
+
+    if un_updated_dupes:
+        print("\n" + "="*50)
+        print("⚠️ DEBUGGING: Summary of Un-updated Duplicate Rows")
+        print("="*50)
+        print(f"The following {len(un_updated_dupes)} rows were part of a duplicate group but were not changed:")
+        for item in un_updated_dupes:
+            print(f"\n  - Row Index: {item['index']}")
+            print(f"    - s2_id: {item['s2_id']}")
+            print(f"    - Title: {str(item['title'])}")
+    print("="*50)
+    
+    return df_corrected
 
 def search_by_title(api_key, title):
     """
@@ -134,11 +247,10 @@ def fill_missing_values(df, empty_mask, api_key):
             try:
                 title = row['title']
                 if pd.isna(title) or str(title).strip() == '':
-                    print(f"Row {idx}: Skipping - no title available")
+                    # This print is commented out to reduce noise, but can be enabled for debugging.
+                    # print(f"Row {idx}: Skipping - no title available")
                     continue
                     
-                print(f"Row {idx}: Searching for '{title[:60]}...'")
-                
                 # Search for the paper
                 result = search_by_title(api_key, title)
                 
@@ -159,7 +271,7 @@ def fill_missing_values(df, empty_mask, api_key):
                             updated = True
                     
                     # Fill DOI if missing
-                    if pd.isna(df_updated.at[idx, 'DOI']) or str(df_updated.at[idx, 'DOI']).strip() in ['', 'nan']:
+                    if 'DOI' in df_updated.columns and (pd.isna(df_updated.at[idx, 'DOI']) or str(df_updated.at[idx, 'DOI']).strip() in ['', 'nan']):
                         external_ids = result.get('externalIds', {})
                         if external_ids.get('DOI'):
                             df_updated.at[idx, 'DOI'] = external_ids['DOI']
@@ -167,12 +279,7 @@ def fill_missing_values(df, empty_mask, api_key):
                     
                     if updated:
                         filled_count += 1
-                        print(f"Row {idx}: Successfully filled missing values")
-                    else:
-                        print(f"Row {idx}: Found paper but no missing values to fill")
-                else:
-                    print(f"Row {idx}: No paper found")
-                
+
                 time.sleep(1)
                 
             except Exception as e:
@@ -211,64 +318,97 @@ def save_updated_dataframe(df, filename='paper_info_updated.csv'):
     try:
         output_path = f'./data/{filename}'
         df.to_csv(output_path, index=False)
-        print(f"Updated data saved to: {output_path}")
+        print(f"\nUpdated data saved to: {output_path}")
     except Exception as e:
         print(f"Error saving file: {e}")
 
 if __name__ == "__main__":
-    API_KEY = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w"
+    # --- Script Configuration ---
+    API_KEY = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w" # Replace with your actual key if needed
+    FILE_PATH = './data/paper_info_updated.csv'
+    # Columns to check for missing values to trigger the fill process
+    INITIAL_CHECK_COLUMNS = ['corpus_id', 's2_id']
+    # Columns to check for the final statistics report
+    FINAL_CHECK_COLUMNS = ['corpus_id', 's2_id', 'DOI']
+    # --------------------------
+
+    # --- Load Data ---
+    try:
+        df = pd.read_csv(FILE_PATH)
+        print(f"✅ Successfully loaded {FILE_PATH}. Total rows: {len(df)}")
+    except FileNotFoundError:
+        print(f"❌ Error: {FILE_PATH} not found. Exiting.")
+        exit()
+    except Exception as e:
+        print(f"❌ Error loading data: {e}")
+        exit()
+
+    # --- Step 1: Fix Duplicates (Optional) ---
+    response_dupes = input("\nDo you want to check for and fix duplicate IDs? (y/n): ")
+    if response_dupes.lower() in ['y', 'yes']:
+        df = fix_dupes(df, API_KEY)
+    else:
+        print("Skipping duplicate check.")
     
-    # First, analyze the current state
-    result = test_missing_values()
+    # df is now updated in memory if duplicates were fixed.
+
+    # --- Step 2: Fill Missing Values (Optional) ---
+    print("\n" + "="*50)
+    print("ANALYZING FOR MISSING VALUES (Post-Dupe-Fix):")
+    print("="*50)
     
-    if result[0] is not None and result[1] is not None:
-        df, empty_mask = result
-        
-        # Ask user if they want to proceed with filling missing values
-        print(f"\nFound {empty_mask.sum()} rows with missing values.")
-        response = input("Do you want to attempt to fill missing values using Semantic Scholar API? (y/n): ")
-        
-        if response.lower() in ['y', 'yes']:
-            # Fill missing values
-            df_updated = fill_missing_values(df, empty_mask, API_KEY)
-            
-            # Show updated statistics
-            print("\n" + "="*50)
-            print("UPDATED STATISTICS:")
-            print("="*50)
-            
-            # Recalculate missing values
-            empty_mask_updated = (
-                df_updated['corpus_id'].isna() | 
-                (df_updated['corpus_id'].astype(str).str.strip() == '') |
-                (df_updated['corpus_id'].astype(str).str.strip() == 'nan') |
-                (df_updated['corpus_id'] == 0) |
-                df_updated['s2_id'].isna() | 
-                (df_updated['s2_id'].astype(str).str.strip() == '') |
-                (df_updated['s2_id'].astype(str).str.strip() == 'nan') |
-                df_updated['DOI'].isna() | 
-                (df_updated['DOI'].astype(str).str.strip() == '') |
-                (df_updated['DOI'].astype(str).str.strip() == 'nan')
-            )
-            
-            rows_with_empty_values_updated = empty_mask_updated.sum()
-            print(f"Rows with empty or None values after update: {rows_with_empty_values_updated}")
-            print(f"Percentage of rows with missing values: {(rows_with_empty_values_updated / len(df_updated)) * 100:.2f}%")
-            
-            # Show breakdown by column
-            print(f"\nBreakdown by column:")
-            for col in ['corpus_id', 's2_id', 'DOI']:
-                col_empty = (
-                    df_updated[col].isna() | 
-                    (df_updated[col].astype(str).str.strip() == '') |
-                    (df_updated[col].astype(str).str.strip() == 'nan') |
-                    (df_updated[col] == 0)
-                ).sum()
-                print(f"  {col}: {col_empty} empty values ({col_empty/len(df_updated)*100:.2f}%)")
-            
-            # Save updated data
-            save_updated_dataframe(df_updated)
+    # Manually calculate the mask on the current dataframe
+    empty_mask = pd.Series([False] * len(df), index=df.index)
+    for col in INITIAL_CHECK_COLUMNS:
+        base_col_mask = (df[col].isna() | (df[col].astype(str).str.strip() == '') | (df[col].astype(str).str.strip() == 'nan'))
+        if col == 'corpus_id':
+            base_col_mask |= (df[col] == 0)
+        empty_mask |= base_col_mask
+    
+    rows_with_empty_values = empty_mask.sum()
+    print(f"Found {rows_with_empty_values} rows with missing values in {INITIAL_CHECK_COLUMNS}.")
+    
+    df_final = df.copy() # Start with the current version of the dataframe
+
+    if rows_with_empty_values > 0:
+        response_fill = input("Do you want to attempt to fill them using the Semantic Scholar API? (y/n): ")
+        if response_fill.lower() in ['y', 'yes']:
+            df_final = fill_missing_values(df, empty_mask, API_KEY)
         else:
             print("Skipping missing value filling.")
     else:
-        print("Could not load data. Exiting.")
+        print("✅ No missing values to fill.")
+
+    # --- Step 3: Final Statistics and Save ---
+    print("\n" + "="*50)
+    print("FINAL STATISTICS:")
+    print("="*50)
+    
+    # Recalculate missing values across all target columns for the final report
+    final_empty_mask_updated = pd.Series([False] * len(df_final), index=df_final.index)
+    for col in FINAL_CHECK_COLUMNS:
+         if col in df_final.columns:
+            base_mask = (df_final[col].isna() | (df_final[col].astype(str).str.strip() == '') | (df_final[col].astype(str).str.strip() == 'nan'))
+            if col == 'corpus_id':
+                base_mask |= (df_final[col] == 0)
+            final_empty_mask_updated |= base_mask
+
+    rows_with_empty_values_updated = final_empty_mask_updated.sum()
+    print(f"Total rows with empty or None values after all operations: {rows_with_empty_values_updated}")
+    if len(df_final) > 0:
+        print(f"Percentage of rows with missing values: {(rows_with_empty_values_updated / len(df_final)) * 100:.2f}%")
+    
+    # Show final breakdown by column
+    print(f"\nBreakdown by column:")
+    for col in FINAL_CHECK_COLUMNS:
+        if col in df_final.columns:
+            col_mask = (df_final[col].isna() | (df_final[col].astype(str).str.strip() == '') | (df_final[col].astype(str).str.strip() == 'nan'))
+            if col == 'corpus_id':
+                col_mask |= (df_final[col] == 0)
+
+            col_empty = col_mask.sum()
+            if len(df_final) > 0:
+                print(f"  - {col}: {col_empty} empty values ({col_empty/len(df_final)*100:.2f}%)")
+
+    # Save the final, cleaned data
+    save_updated_dataframe(df_final)

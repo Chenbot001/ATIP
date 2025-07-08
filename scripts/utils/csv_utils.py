@@ -259,61 +259,8 @@ def print_dataframe_summary(df: pd.DataFrame) -> None:
         dtype = info['data_types'][col]
         print(f"  {col}: {dtype} (null: {null_pct:.1f}%)")
 
-# Configuration for main function examples
-DEFAULT_CONFIG = {
-    'csv_filepath': 'data/paper_info.csv',
-    'column_name': 's2_id',
-    'operation': 'check_uniqueness'  # 'check_uniqueness', 'remove_column', 'column_info', 'dataframe_summary'
-}
-
-def main():
-    """
-    Main function demonstrating usage of the utility functions.
-    Modify DEFAULT_CONFIG to change behavior.
-    """
-    config = DEFAULT_CONFIG
-    csv_filepath = config['csv_filepath']
-    column_name = config['column_name']
-    operation = config['operation']
-    
-    print(f"CSV Utils - File: {csv_filepath}")
-    print("=" * 60)
-    
-    try:
-        # Load the DataFrame
-        df = load_csv_data(csv_filepath)
-        
-        if operation == 'check_uniqueness':
-            print(f"Checking uniqueness of column '{column_name}'")
-            is_unique, duplicates = check_column_uniqueness(df, column_name)
-            
-            if is_unique:
-                print("\nResult: Column contains all unique values ✓")
-            else:
-                print("\nResult: Column contains duplicate values ✗")
-                
-        elif operation == 'remove_column':
-            print(f"Removing column '{column_name}'")
-            modified_df, success = remove_column(df, column_name, save_to_file=True, filepath=csv_filepath)
-            if success:
-                print("Column removal completed successfully ✓")
-            else:
-                print("Column removal failed ✗")
-                
-        elif operation == 'column_info':
-            print(f"Getting information for column '{column_name}'")
-            print_column_info(df, column_name)
-            
-        elif operation == 'dataframe_summary':
-            print("Getting DataFrame summary")
-            print_dataframe_summary(df)
-            
-        else:
-            print(f"Unknown operation: {operation}")
-            print("Available operations: check_uniqueness, remove_column, column_info, dataframe_summary")
-            
-    except Exception as e:
-        print(f"Error in main execution: {str(e)}")
 
 if __name__ == "__main__":
-    main() 
+    filepath = "data/paper_info.csv"
+    df = load_csv_data(filepath)
+    check_column_uniqueness(df, "s2_id")
