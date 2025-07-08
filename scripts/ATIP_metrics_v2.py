@@ -155,7 +155,7 @@ if __name__ == '__main__':
     print(f"Input: '{display_name}' | Found matching ID(s): {target_author_ids}\n")
     
     for author_id in target_author_ids:
-        print(f"--- Calculating metrics for Author ID: {author_id} ---")
+        print(f"--- Calculating metrics for: {display_name} ---")
         
         career_len = get_career_length(author_id, authorships_df, paper_info_df)
         
@@ -163,7 +163,6 @@ if __name__ == '__main__':
             anci_metric, paper_count = calculate_anci_frac(author_id, career_len, paper_info_df, authorships_df)
             cagr, linear_trend = calculate_citation_acceleration(author_id, career_len, author_citation_metrics_df)
             
-            print(f"  Author Name: {display_name}")
             print(f"  Career Length: {career_len} years")
             print(f"  Paper Count: {paper_count}")
             print(f"\n  ANCI_frac: {anci_metric:.4f}")
