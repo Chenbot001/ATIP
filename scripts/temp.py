@@ -1,93 +1,140 @@
 import pandas as pd
 import numpy as np
 
-def calculate_career_length_distribution(paper_info_df: pd.DataFrame,
-                                         authorships_df: pd.DataFrame,
-                                         author_profiles_df: pd.DataFrame) -> pd.Series:
+def clean_award_names(df: pd.DataFrame, column_name: str = 'award') -> pd.DataFrame:
     """
-    Calculates the career length for every author in the dataset and returns the distribution.
+    Cleans and normalizes the award names in a DataFrame into canonical categories.
 
     Args:
-        paper_info_df (pd.DataFrame): DataFrame from 'paper_info.csv'. 
-                                      Must contain 's2_id' and 'year'.
-        authorships_df (pd.DataFrame): DataFrame from 'authorships.csv'. 
-                                       Must contain 'author_id' and 'paper_id'.
-        author_profiles_df (pd.DataFrame): DataFrame from 'author_profiles.csv'. 
-                                           Used to get a complete list of author_ids.
+        df (pd.DataFrame): The DataFrame containing the award data.
+        column_name (str): The name of the column with raw award strings.
 
     Returns:
-        pd.Series: A pandas Series containing the career length for each author, 
-                   indexed by author_id.
+        pd.DataFrame: The DataFrame with a new 'award_cleaned' column.
     """
-    print("Starting career length calculation for all authors...")
+    # Mapping of canonical names to the raw strings
+    AWARD_CATEGORIES = {
+        'Test-of-Time Award': [
+            'ACL 2020 Test-of-Time Award (25 years)', 'ACL 2022 25-Year Test of Time',
+            'ACL 25-Year Test of Time Paper Award', 'NAACL 2018 Test-of-Time',
+            'NAACL 2018 Test-of-Time Award'
+        ],
+        'Best Overall Paper': [
+            'Best Long Paper', 'Best Overall Paper', 'Best Paper', 'Best Paper Award'
+        ],
+        'Outstanding Paper': [
+            'Outstanding Long Paper', 'Outstanding Paper', 'Outstanding Paper Award', 'Outstanding Short Paper'
+        ],
+        'Best Short Paper': ['Best Short Paper'],
+        'Best Demo Paper': [
+            'Best Demo Paper', 'Best Demo Paper Award', 'Best Demo paper', 'Best Demonstration Paper',
+            'Demo Track: Best Paper Award', 'Demo Track: Outstanding Paper Award', 'Outstanding Demo Paper Award'
+        ],
+        'Best Thematic/Resource/Impact Paper': [
+            'Best Resource Paper', 'Best Resource Paper Award', 'Best Social Impact Paper Award',
+            'Best Special Theme Paper', 'Best Thematic Paper', 'Best Theme Paper', 'Best Theme Paper Award',
+            'Best paper on human-centered NLP special theme', 'Resource Award', 'Resource Paper Award',
+            'Social Impact Award', 'Social Impact Paper Award', 'Special Theme Paper Award', 'Theme Paper Award'
+        ],
+        'Best Paper Runner-Up': ['Best Paper Runner-Up'],
+        'Honorable Mention': [
+            'Best Demonstration Runner-up', 'Honorable Demonstration Paper', 'Honorable Mention Paper',
+            'Honorable Mention for Best Demonstration Paper', 'Honorable Mention for Best Overall Paper',
+            'Honorable Mention for Best Theme Paper', 'Honorable mention for contribution to methods',
+            'Honorable mention for contribution to special theme on human-centered NLP',
+            'Honorable mention for contributions to resources'
+        ],
+        'Area Chair/SAC Award': [
+            'Area Chair Award (Discourse and Pragmatics)', 'Area Chair Award (Interpretability and Analysis of Models for NLP)',
+            'Area Chair Award (Linguistic Diversity)', 'Area Chair Award (Linguistic Theories, Cognitive Modeling, and Psycholinguistics)',
+            'Area Chair Award (Multilingualism and Cross-Lingual NLP)', 'Area Chair Award (NLP Applications)',
+            'Area Chair Award (Question Answering)', 'Area Chair Award (Resources and Evaluation)',
+            'Area Chair Award (Semantics: Lexical)', 'Area Chair Award (Semantics: Sentence-level Semantics, Textual Inference, and Other Areas)',
+            'Area Chair Award (Sentiment Analysis, Stylistic Analysis, and Argument Mining)', 'Area Chair Award (Speech and Multimodality)',
+            'SAC Award: Computational Social Science and Cultural Analytics', 'SAC Award: Discourse and Pragmatics',
+            'SAC Award: Efficient/Low-Resource Methods for NLP', 'SAC Award: Ethics, Bias, and Fairness',
+            'SAC Award: Generation', 'SAC Award: Information Retrieval and Text Mining',
+            'SAC Award: Interpretability and Analysis of Models for NLP', 'SAC Award: Linguistic theories, Cognitive Modeling and Psycholinguistics',
+            'SAC Award: Machine Learning for NLP', 'SAC Award: Machine Translation',
+            'SAC Award: Multilinguality and Language Diversity', 'SAC Award: Multimodality and Language Grounding to Vision, Robotics and Beyond',
+            'SAC Award: Phonology, Morphology and Word Segmentation', 'SAC Award: Question Answering',
+            'SAC Award: Resources and Evaluation', 'SAC Award: Semantics(Lexical)',
+            'SAC Award: Semantics(Sentence-level Semantics, Textual Inference and Other areas)', 'SAC Award: Sentiment Analysis, Stylistic Analysis, and Argument Mining',
+            'SAC Award: Speech recognition, text-to-speech and spoken language understanding', 'SAC Award: Summarization',
+            'SAC Award: Syntax(Tagging, Chunking and Parsing)'
+        ],
+        'Specific Contribution Award': [
+            'Best Explainable NLP Paper', 'Best Industry Paper', 'Best Linguistic Insight Paper',
+            'Best efficient NLP paper', 'Best new method paper', 'Best new task (tied) and new resource paper',
+            'Best new task paper (tied)'
+        ],
+        'SRW Best Paper Award': ['SRW Best Paper Award'],
+        'Reproduction Award': ['Reproduction Award']
+    }
 
-    # For clarity, rename 'paper_id' in authorships_df to 's2_id' to match paper_info_df
-    if 'paper_id' in authorships_df.columns:
-        authorships_df = authorships_df.rename(columns={'paper_id': 's2_id'})
+    # Invert the mapping for easy lookup: {raw_name: canonical_name}
+    cleaning_map = {raw_name: canonical_name
+                    for canonical_name, raw_names in AWARD_CATEGORIES.items()
+                    for raw_name in raw_names}
 
-    # Merge the two dataframes to link author_id directly to publication year
-    author_paper_years_df = pd.merge(
-        authorships_df[['author_id', 's2_id']],
-        paper_info_df[['s2_id', 'year']],
-        on='s2_id'
-    )
+    df['award_cleaned'] = df[column_name].map(cleaning_map)
+    return df
 
-    # Find the first publication year for each author
-    first_pub_years = author_paper_years_df.groupby('author_id')['year'].min()
+def assign_award_weights(df: pd.DataFrame, cleaned_column_name: str = 'award_cleaned') -> pd.DataFrame:
+    """
+    Assigns a weight to each paper based on its cleaned award category.
 
-    # Get a complete list of all author IDs from the profiles file
-    all_author_ids = author_profiles_df['author_id'].unique()
-    
-    # Map the first publication year to the full list of authors
-    # Authors without publications will have NaN for their first pub year
-    first_pub_years = first_pub_years.reindex(all_author_ids)
+    Args:
+        df (pd.DataFrame): DataFrame with a cleaned award column.
+        cleaned_column_name (str): The name of the column with cleaned award names.
 
-    # Calculate career length Y = 2025 - (min(publication_year)) + 1
-    current_year = 2025
-    career_lengths = current_year - first_pub_years + 1
+    Returns:
+        pd.DataFrame: The DataFrame with a new 'award_weight' column.
+    """
+    WEIGHT_MAP = {
+        # Tier 1: Premier Awards
+        'Test-of-Time Award': 2.0,
+        'Best Overall Paper': 2.0,
+        # Tier 2: Major Awards
+        'Outstanding Paper': 1.5,
+        'Best Short Paper': 1.5,
+        'Best Demo Paper': 1.5,
+        'Best Thematic/Resource/Impact Paper': 1.5,
+        'Best Paper Runner-Up': 1.5,
+        # Tier 3: Special Recognition
+        'Honorable Mention': 1.0,
+        'Area Chair/SAC Award': 1.0,
+        'Specific Contribution Award': 1.0,
+        'SRW Best Paper Award': 1.0,
+        # Tier 4: Other Recognitions
+        'Reproduction Award': 0.5
+    }
 
-    print("Calculation complete.")
-    return career_lengths.dropna().astype(int) # Drop authors with no papers and convert to int
+    df['award_weight'] = df[cleaned_column_name].map(WEIGHT_MAP).fillna(0)
+    return df
 
 # --- Example Usage ---
 if __name__ == '__main__':
-    # Load the necessary datasets
-    try:
-        paper_info_df = pd.read_csv('data/paper_info.csv')
-        authorships_df = pd.read_csv('data/authorships.csv')
-        author_profiles_df = pd.read_csv('data/author_profiles.csv')
-    except FileNotFoundError:
-        print("Make sure 'paper_info.csv', 'authorships.csv', and 'author_profiles.csv' are in a 'data/' directory.")
-        exit()
+    # 1. Create a sample DataFrame mimicking your data
+    csv_filepath = "data/paper_awards.csv"
+    df = pd.read_csv(csv_filepath)
+    print("--- Original DataFrame ---")
+    print(df)
+    print("\n" + "="*30 + "\n")
 
-    # Calculate career lengths
-    career_lengths_dist = calculate_career_length_distribution(paper_info_df, authorships_df, author_profiles_df)
+    # 2. Clean the award names
+    cleaned_df = clean_award_names(df, column_name='award')
+    print("--- DataFrame After Cleaning ---")
+    print(cleaned_df[['paper_id', 'award_cleaned']])
+    print("\n" + "="*30 + "\n")
 
-    print("\n--- Career Length Distribution Analysis ---\n")
 
-    # 1. Summary Statistics (still useful for a general overview)
-    print("Key Statistics:")
-    print(career_lengths_dist.describe())
+    # 3. Assign weights based on the cleaned names
+    final_df = assign_award_weights(cleaned_df, cleaned_column_name='award_cleaned')
+    print("--- Final DataFrame with Weights ---")
+    print(final_df)
 
-    # 2. Distribution by exact career length
-    print("\nDistribution by Exact Career Length:")
-    
-    # Get counts for each unique career length value
-    exact_counts = career_lengths_dist.value_counts().sort_index()
-    exact_percentages = career_lengths_dist.value_counts(normalize=True).sort_index() * 100
-    
-    # Create a DataFrame for a clean display
-    exact_dist_df = pd.DataFrame({
-        'Career Length (Years)': exact_counts.index,
-        'Author Count': exact_counts.values,
-        'Percentage': exact_percentages.values
-    })
-    
-    exact_dist_df['Percentage'] = exact_dist_df['Percentage'].map('{:.2f}%'.format)
-    
-    # Set the career length as the index for better readability
-    exact_dist_df.set_index('Career Length (Years)', inplace=True)
-    
-    # Display the full distribution table
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        print(exact_dist_df)
+    # 4. Save the final DataFrame to a new CSV file
+    output_filepath = "data/paper_awards_cleaned.csv"
+    final_df.to_csv(output_filepath, index=False)
+    print(f"Final DataFrame saved to {output_filepath}")

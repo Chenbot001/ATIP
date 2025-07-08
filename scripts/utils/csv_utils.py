@@ -259,8 +259,38 @@ def print_dataframe_summary(df: pd.DataFrame) -> None:
         dtype = info['data_types'][col]
         print(f"  {col}: {dtype} (null: {null_pct:.1f}%)")
 
+def get_unique_values(df: pd.DataFrame, column_name: str) -> None:
+    """
+    Print the unique values of a specified column.
+    
+    Args:
+        df (pd.DataFrame): DataFrame to analyze
+        column_name (str): Name of the column to get unique values from
+    """
+    try:
+        if not column_exists(df, column_name):
+            print(f"Error: Column '{column_name}' not found in the DataFrame.")
+            print(f"Available columns: {get_columns(df)}")
+            return
+        
+        # Get unique values from the column
+        unique_values = df[column_name].dropna().unique()
+        
+        print(f"\nUnique values in column '{column_name}':")
+        print("=" * 50)
+        print(f"Total unique values: {len(unique_values)}")
+        
+        if len(unique_values) == 0:
+            print("No unique values found (column may be empty or contain only null values)")
+        else:
+            print("\nUnique values:")
+            for i, value in enumerate(sorted(unique_values), 1):
+                print(f"  {i:3d}. {value}")
+                
+    except Exception as e:
+        print(f"Error getting unique column values: {str(e)}")
 
 if __name__ == "__main__":
-    filepath = "data/paper_info.csv"
+    filepath = "data/paper_awards.csv"
     df = load_csv_data(filepath)
-    check_column_uniqueness(df, "s2_id")
+    get_unique_values(df, "award")
