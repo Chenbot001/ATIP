@@ -30,11 +30,11 @@ def get_career_length(author_id: int,
     Returns:
         int: The author's career length in years. Returns 0 if no papers are found.
     """
-    author_s2_ids = authorships_df[authorships_df['author_id'] == author_id]['paper_id'].unique()
-    if len(author_s2_ids) == 0:
+    author_paper_ids = authorships_df[authorships_df['author_id'] == author_id]['paper_id'].unique()
+    if len(author_paper_ids) == 0:
         return 0
     
-    papers_details = paper_info_df[paper_info_df['paper_id'].isin(author_s2_ids)]
+    papers_details = paper_info_df[paper_info_df['corpus_id'].isin(author_paper_ids)]
     if papers_details.empty:
         return 0
         
@@ -44,29 +44,29 @@ def get_career_length(author_id: int,
     return int(max(0, career_length))
 
 # --- Adjusted Citation Impact (ANCI)---
-def calculate_anci_frac(author_id: int,
+def calculate_anci(author_id: int,
                         career_length: int,
                         paper_info_df: pd.DataFrame,
                         authorships_df: pd.DataFrame) -> tuple:
     """
     Calculates the co-authorship fractionalized ANCI metric using a pre-calculated career length.
     """
-    author_s2_ids = authorships_df[authorships_df['author_id'] == author_id]['paper_id'].unique()
-    papers_details = paper_info_df[paper_info_df['paper_id'].isin(author_s2_ids)].copy()
+    author_paper_ids = authorships_df[authorships_df['author_id'] == author_id]['paper_id'].unique()
+    papers_details = paper_info_df[paper_info_df['corpus_id'].isin(author_paper_ids)].copy()
     
     if career_length <= 0 or papers_details.empty:
         return 0.0, 0
     
     author_counts = authorships_df.groupby('paper_id')['author_id'].nunique()
-    papers_details['num_authors'] = papers_details['paper_id'].map(author_counts)
+    papers_details['num_authors'] = papers_details['corpus_id'].map(author_counts)
     papers_details.dropna(subset=['num_authors'], inplace=True)
     papers_details = papers_details[papers_details['num_authors'] > 0]
     papers_details['frac_citation'] = papers_details['citation_count'] / papers_details['num_authors']
     
     c_frac = papers_details['frac_citation'].sum()
-    anci_frac = c_frac / np.sqrt(career_length)
+    anci_p_frac = c_frac / (len(papers_details) * np.sqrt(career_length))
     
-    return anci_frac, len(papers_details)
+    return anci_p_frac, len(papers_details)
 
 # --- Citation Acceleration (CAGR + Linear Trend) ---
 def _calculate_slope(citations_in_window: dict) -> float:
@@ -242,29 +242,25 @@ def _calculate_venue_score(paper_info_df: pd.DataFrame,
     return base_score * track_weight
 
 def _calculate_award_impact_score(paper_awards_df: pd.DataFrame, 
-                                  paper_id: int, 
-                                  id_column: str = 'paper_id',
-                                  award_column: str = 'category') -> float:
+                                  paper_id: int) -> float:
     """
     Calculates a normalized award score for a specific paper ID from a DataFrame.
 
     Args:
         paper_awards_df: DataFrame containing paper awards data.
         paper_id: The integer ID of the paper to look up.
-        id_column: The name of the paper ID column in the DataFrame.
-        award_column: The name of the column containing the award strings.
 
     Returns:
         A normalized score between 0.0 and 1.0. Returns 0.0 if the paper has no awards.
     """
     # Filter the DataFrame to find all awards for the given paper_id
-    paper_awards = paper_awards_df[paper_awards_df[id_column] == paper_id]
+    paper_awards = paper_awards_df[paper_awards_df['paper_id'] == paper_id]
 
     if paper_awards.empty:
         return 0.0
 
     # Get the list of award names from the specified column
-    awards_list = paper_awards[award_column].tolist()
+    awards_list = paper_awards['award'].tolist()
 
     # Find the maximum point value among the paper's awards
     max_points = 0.0
@@ -303,12 +299,10 @@ def _calculate_recency_score(publication_year: int) -> float:
         
     return 1 / (1 + age)
 
-def _calculate_paper_pqi(
-    paper_id: int,
-    paper_info_df: pd.DataFrame,
-    venue_tier_df: pd.DataFrame,
-    paper_awards_df: pd.DataFrame
-) -> float:
+def _calculate_paper_pqi(paper_id: int,
+                         paper_info_df: pd.DataFrame,
+                         venue_tier_df: pd.DataFrame,
+                         paper_awards_df: pd.DataFrame) -> float:
     """Calculates the full PQI score for a single paper."""
     # 1. Venue Score
     venue_score = _calculate_venue_score(paper_info_df, venue_tier_df, paper_id)
@@ -321,7 +315,7 @@ def _calculate_paper_pqi(
         citation_score = 0.0
 
     # 3. Award Score
-    award_score = _calculate_award_impact_score(paper_awards_df, paper_id=paper_id, id_column='paper_id', award_column='award')
+    award_score = _calculate_award_impact_score(paper_awards_df, paper_id=paper_id)
     
     # 4. Recency Score
     try:
@@ -409,7 +403,7 @@ if __name__ == '__main__':
     #     career_len = get_career_length(author_id, authorships_df, paper_info_df)
         
     #     if career_len > 0:
-    #         anci_metric, paper_count = calculate_anci_frac(author_id, career_len, paper_info_df, authorships_df)
+    #         anci_metric, paper_count = calculate_anci(author_id, career_len, paper_info_df, authorships_df)
     #         cagr, linear_trend = calculate_citation_acceleration(author_id, career_len, author_citation_metrics_df)
             
     #         print(f"  Career Length: {career_len} years")
