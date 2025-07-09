@@ -290,7 +290,8 @@ def get_unique_values(df: pd.DataFrame, column_name: str) -> None:
     except Exception as e:
         print(f"Error getting unique column values: {str(e)}")
 
+
 if __name__ == "__main__":
     filepath = "data/paper_awards.csv"
     df = load_csv_data(filepath)
-    get_unique_values(df, "award")
+    get_unique_values(df, "category")

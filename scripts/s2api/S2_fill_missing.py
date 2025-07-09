@@ -81,8 +81,8 @@ def fix_dupes(df, api_key):
     """
     Identifies and handles duplicate s2_ids.
     1. Removes rows where both s2_id and title are identical.
-    2. For remaining dupes (same s2_id, different title), corrects incorrect entries via API.
-    3. Reports any duplicate rows that were not updated during the process.
+    2. For remaining dupes (same s2_id, different title), searches by title for each row.
+    3. Updates rows based on API results: match current data (no change), different IDs (update), or no result (set to defaults).
     """
     print("\nStarting duplicate check and correction process...")
     dupe_mask = df.duplicated(subset=['s2_id'], keep=False) & df['s2_id'].notna()
@@ -101,6 +101,7 @@ def fix_dupes(df, api_key):
     
     df_corrected = df.copy()
     api_corrected_count = 0
+    api_not_found_count = 0
     title_dupes_removed_count = 0
 
     # Loop to attempt corrections
@@ -114,38 +115,64 @@ def fix_dupes(df, api_key):
             df_corrected.drop(indices_to_drop, inplace=True)
             title_dupes_removed_count += len(indices_to_drop)
         
-        # --- 2. For remaining dupes (same ID, different titles), verify with API ---
+        # --- 2. For remaining dupes (same ID, different titles), search by title for each row ---
         # Re-evaluate the group after potential removals
         dupe_group_after_cleanup = df_corrected[df_corrected['s2_id'] == s2_id]
         
-        # Only proceed to API check if there's still ambiguity (more than 1 row)
-        if len(dupe_group_after_cleanup) > 1:
-            for idx, row in dupe_group_after_cleanup.iterrows():
-                title = row.get('title')
-                if pd.isna(title) or not title.strip():
-                    continue
+        # Process each row in the duplicate group
+        for idx, row in dupe_group_after_cleanup.iterrows():
+            title = row.get('title')
+            if pd.isna(title) or not title.strip():
+                continue
 
-                api_result = search_by_title(api_key, title)
-                time.sleep(1) 
+            api_result = search_by_title(api_key, title)
+            time.sleep(1) 
 
-                if api_result and api_result.get('paperId'):
-                    correct_s2_id = api_result.get('paperId')
+            if api_result and api_result.get('paperId'):
+                # API returned a result - check if it matches current data
+                api_s2_id = api_result.get('paperId')
+                api_corpus_id = api_result.get('corpusId')
+                api_doi = api_result.get('externalIds', {}).get('DOI')
+                
+                current_s2_id = str(row['s2_id'])
+                current_corpus_id = str(row['corpus_id']) if not pd.isna(row['corpus_id']) else ''
+                current_doi = str(row.get('DOI', '')) if not pd.isna(row.get('DOI', '')) else ''
+                
+                # Check if the returned IDs match the current row data
+                s2_id_matches = current_s2_id == str(api_s2_id)
+                corpus_id_matches = current_corpus_id == str(api_corpus_id) if api_corpus_id else current_corpus_id == ''
+                doi_matches = current_doi == str(api_doi) if api_doi else current_doi == ''
+                
+                if s2_id_matches and corpus_id_matches and doi_matches:
+                    # IDs match current data - do nothing
+                    pass
+                else:
+                    # IDs don't match - update with correct values
+                    df_corrected.at[idx, 's2_id'] = api_s2_id
+                    df_corrected.at[idx, 'corpus_id'] = api_corpus_id
                     
-                    if row['s2_id'] != correct_s2_id:
-                        df_corrected.at[idx, 's2_id'] = correct_s2_id
-                        df_corrected.at[idx, 'corpus_id'] = api_result.get('corpusId')
-                        
-                        if 'DOI' in df_corrected.columns and api_result.get('externalIds', {}).get('DOI'):
-                            df_corrected.at[idx, 'DOI'] = api_result['externalIds']['DOI']
-                        
-                        api_corrected_count += 1
+                    if 'DOI' in df_corrected.columns:
+                        df_corrected.at[idx, 'DOI'] = api_doi
+                    
+                    api_corrected_count += 1
+            else:
+                # API returned no result - set to default values
+                df_corrected.at[idx, 'corpus_id'] = 0
+                df_corrected.at[idx, 's2_id'] = ''
+                
+                if 'DOI' in df_corrected.columns:
+                    df_corrected.at[idx, 'DOI'] = ''
+                
+                api_not_found_count += 1
 
     print(f"\nDuplicate check complete!")
     if title_dupes_removed_count > 0:
         print(f"✅ Removed {title_dupes_removed_count} redundant entries with identical titles.")
     if api_corrected_count > 0:
         print(f"✅ Corrected {api_corrected_count} rows with incorrect ID assignments via API.")
-    if title_dupes_removed_count == 0 and api_corrected_count == 0:
+    if api_not_found_count > 0:
+        print(f"⚠️ Set {api_not_found_count} rows to default values (paper not found on Semantic Scholar).")
+    if title_dupes_removed_count == 0 and api_corrected_count == 0 and api_not_found_count == 0:
         print("No rows required correction or removal.")
 
 
@@ -325,7 +352,7 @@ def save_updated_dataframe(df, filename='paper_info_updated.csv'):
 if __name__ == "__main__":
     # --- Script Configuration ---
     API_KEY = "39B73CXWua7xhzGlxFrNJ5wY6uIjXCna9sLxWL2w" # Replace with your actual key if needed
-    FILE_PATH = './data/paper_info_updated.csv'
+    FILE_PATH = './data/paper_info.csv'
     # Columns to check for missing values to trigger the fill process
     INITIAL_CHECK_COLUMNS = ['corpus_id', 's2_id']
     # Columns to check for the final statistics report
