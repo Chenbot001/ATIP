@@ -1,0 +1,87 @@
+CSV FILES STRUCTURE ANALYSIS
+==================================================
+
+1. FILE: authorships.csv
+   Size: 15.67 MB
+   Total Rows: 133,456
+   Columns (6):
+      1. author_id
+      2. paper_id (corpus_id)
+      3. author_name
+      4. is_first_author
+      5. is_last_author
+      6. title
+
+--------------------------------------------------
+
+2. FILE: author_profiles.csv
+   Size: 2.88 MB
+   Total Rows: 56,290
+   Columns (8):
+      1. author_id
+      2. author_name
+      3. affiliation
+      4. pqi_score
+      5. anci_score
+      6. accel_score
+      7. h_index
+      8. citations
+
+--------------------------------------------------
+
+3. FILE: paper_info.csv
+   Size: 28.99 MB
+   Total Rows: 28,082
+   Columns (10):
+      1. paper_id (corpus_id)
+      2. s2_id
+      3. acl_id
+      4. DOI
+      5. title
+      6. abstract
+      7. venue
+      8. year
+      9. track
+     10. citation_count
+
+--------------------------------------------------
+
+4. FILE: top100_accel.csv
+   Size: 0.0 MB
+   Total Rows: 100
+   Columns (6):
+      1. ranking
+      2. author_id
+      3. author_name
+      4. accel_score
+      5. paper_count
+      6. career_length
+
+--------------------------------------------------
+
+5. FILE: top100_anci.csv
+   Size: 0.0 MB
+   Total Rows: 100
+   Columns (6):
+      1. ranking
+      2. author_id
+      3. author_name
+      4. anci_score
+      5. paper_count
+      6. career_length
+
+--------------------------------------------------
+
+6. FILE: top100_pqi.csv
+   Size: 0.0 MB
+   Total Rows: 100
+   Columns (6):
+      1. ranking
+      2. author_id
+      3. author_name
+      4. pqi_score
+      5. paper_count
+      6. career_length
+
+--------------------------------------------------
+

@@ -125,7 +125,46 @@ CSV FILES STRUCTURE ANALYSIS
 
 --------------------------------------------------
 
-11. FILE: venue_tiers.csv
+11. FILE: top100_accel.csv
+   Size: 0.0 MB
+   Total Rows: 100
+   Columns (6):
+      1. ranking
+      2. author_id
+      3. author_name
+      4. acceleration_score
+      5. paper_count
+      6. career_length
+
+--------------------------------------------------
+
+12. FILE: top100_anci.csv
+   Size: 0.0 MB
+   Total Rows: 100
+   Columns (6):
+      1. ranking
+      2. author_id
+      3. author_name
+      4. anci_p_frac
+      5. paper_count
+      6. career_length
+
+--------------------------------------------------
+
+13. FILE: top100_pqi.csv
+   Size: 0.0 MB
+   Total Rows: 100
+   Columns (6):
+      1. ranking
+      2. author_id
+      3. author_name
+      4. pqi_score
+      5. paper_count
+      6. career_length
+
+--------------------------------------------------
+
+14. FILE: venue_tiers.csv
    Size: 0.0 MB
    Total Rows: 3
    Columns (2):

@@ -83,8 +83,8 @@ def main():
     """Main function to analyze all CSV files in the data folder."""
     
     # Define paths
-    data_folder = Path("./data")
-    output_file = Path("./docs/data_structure_analysis.txt")
+    data_folder = Path("./website/public/data")
+    output_file = Path("./website/public/data/data_structure_analysis.txt")
     
     # Ensure data folder exists
     if not data_folder.exists():

@@ -1,0 +1,21 @@
+{
+  "name": "atip",
+  "version": "1.0.0",
+  "description": "Academic Talent Identification and Profiling",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5",
+    "cytoscape": "^3.28.1",
+    "papaparse": "^5.4.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.5.0",
+    "vite": "^5.0.0"
+  }
+} 

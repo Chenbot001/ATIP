@@ -34,7 +34,7 @@ def get_career_length(author_id: int,
     if len(author_paper_ids) == 0:
         return 0
     
-    papers_details = paper_info_df[paper_info_df['corpus_id'].isin(author_paper_ids)]
+    papers_details = paper_info_df[paper_info_df['paper_id'].isin(author_paper_ids)]
     if papers_details.empty:
         return 0
         
@@ -52,13 +52,13 @@ def calculate_anci(author_id: int,
     Calculates the co-authorship fractionalized ANCI metric using a pre-calculated career length.
     """
     author_paper_ids = authorships_df[authorships_df['author_id'] == author_id]['paper_id'].unique()
-    papers_details = paper_info_df[paper_info_df['corpus_id'].isin(author_paper_ids)].copy()
+    papers_details = paper_info_df[paper_info_df['paper_id'].isin(author_paper_ids)].copy()
     
     if career_length <= 0 or papers_details.empty:
         return 0.0, 0
     
     author_counts = authorships_df.groupby('paper_id')['author_id'].nunique()
-    papers_details['num_authors'] = papers_details['corpus_id'].map(author_counts)
+    papers_details['num_authors'] = papers_details['paper_id'].map(author_counts)
     papers_details.dropna(subset=['num_authors'], inplace=True)
     papers_details = papers_details[papers_details['num_authors'] > 0]
     papers_details['frac_citation'] = papers_details['citation_count'] / papers_details['num_authors']
@@ -167,15 +167,15 @@ def _find_paper_track(paper_info_df: pd.DataFrame, paper_id: int) -> str:
     If no specific track can be determined, it defaults to 'main'.
 
     Args:
-        paper_info_df: DataFrame containing paper info, including 'corpus_id' and 'acl_id'.
-        paper_corpus_id: The corpus_id of the paper to find the track for.
+        paper_info_df: DataFrame containing paper info, including 'paper_id' and 'acl_id'.
+        paper_id: The paper_id of the paper to find the track for.
 
     Returns:
         The determined track as a string.
     """
     try:
-        # Find the acl_id for the given paper_corpus_id
-        acl_id = paper_info_df.loc[paper_info_df['corpus_id'] == paper_id, 'acl_id'].iloc[0]
+        # Find the acl_id for the given paper_id
+        acl_id = paper_info_df.loc[paper_info_df['paper_id'] == paper_id, 'acl_id'].iloc[0]
         if pd.isna(acl_id):
             return 'main'
     except IndexError:
@@ -214,16 +214,16 @@ def _calculate_venue_score(paper_info_df: pd.DataFrame,
     Calculates a composite venue score based on a paper's venue tier and track.
 
     Args:
-        paper_info_df: DataFrame with paper information (corpus_id, venue, acl_id).
+        paper_info_df: DataFrame with paper information (paper_id, venue, acl_id).
         venue_tier_df: DataFrame mapping venues to tiers ('A', 'B', 'C', 'D').
-        paper_corpus_id: The corpus_id of the paper to score.
+        paper_id: The paper_id of the paper to score.
 
     Returns:
         The calculated floating point venue score.
     """
     try:
         # Get the paper's venue string
-        venue = paper_info_df.loc[paper_info_df['corpus_id'] == paper_id, 'venue'].iloc[0]
+        venue = paper_info_df.loc[paper_info_df['paper_id'] == paper_id, 'venue'].iloc[0]
     except IndexError:
         return 0.0 # Paper not found
 
@@ -309,7 +309,7 @@ def _calculate_paper_pqi(paper_id: int,
 
     # 2. Citation Score
     try:
-        cite_count = paper_info_df.loc[paper_info_df['corpus_id'] == paper_id, 'citation_count'].iloc[0]
+        cite_count = paper_info_df.loc[paper_info_df['paper_id'] == paper_id, 'citation_count'].iloc[0]
         citation_score = math.log(cite_count + 1)
     except IndexError:
         citation_score = 0.0
@@ -319,7 +319,7 @@ def _calculate_paper_pqi(paper_id: int,
     
     # 4. Recency Score
     try:
-        year = paper_info_df.loc[paper_info_df['corpus_id'] == paper_id, 'year'].iloc[0]
+        year = paper_info_df.loc[paper_info_df['paper_id'] == paper_id, 'year'].iloc[0]
         recency_score = _calculate_recency_score(year)
     except IndexError:
         recency_score = 0.0
